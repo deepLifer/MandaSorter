@@ -151,8 +151,16 @@ class Game {
         this.dom.howToPlayButton.addEventListener('click', () => this.showScreen('howToPlay'));
         this.dom.backToMenuButton.addEventListener('click', () => this.showScreen('start'));
         this.dom.playAgainButton.addEventListener('click', () => this.startGame());
-        this.dom.menuButton.addEventListener('click', () => this.showScreen('start'));
-        this.dom.canvas.addEventListener('click', this.handleClick);
+        
+        // Проверяем, существует ли кнопка меню
+        if (this.dom.menuButton) {
+            this.dom.menuButton.addEventListener('click', () => this.showScreen('start'));
+        }
+        
+        // Исправляем привязку обработчика кликов, чтобы сохранить контекст this
+        this.dom.canvas.addEventListener('click', (event) => this.handleClick(event));
+        
+        console.log("Инициализация игры завершена, обработчики событий установлены");
     }
     
     loadResources() {
@@ -290,7 +298,7 @@ class Game {
         this.memecoins = [];
         
         // Создаем чертей
-        const devilCount = 2; // Исправляем на 2 черта вместо 3
+        const devilCount = 2;
         const canvasWidth = this.dom.canvas.width;
         
         // Очищаем существующие перекрестки
@@ -320,6 +328,8 @@ class Game {
             this.conveyor.updateBranches();
         }
         
+        console.log("Игра запущена, перекрестки созданы:", this.conveyor.crossroads);
+        
         // Сброс таймера для спавна мандаринок
         this.spawnTimer = 0;
         
@@ -336,112 +346,120 @@ class Game {
     }
     
     spawnMandarin() {
-        // Проверка, остались ли мандаринки
+        // Проверяем, остались ли мандаринки для спавна
         if (this.state.mandarinsLeft <= 0) return;
         
-        // Уменьшаем счетчик оставшихся мандаринок
-        this.state.mandarinsLeft--;
-        
-        // Обновляем отображение
-        this.updateStatsDisplay();
-        
         // Выбираем случайный тип мандаринки
-        const type = this.settings.mandarinTypes[
-            Math.floor(Math.random() * this.settings.mandarinTypes.length)
-        ];
+        const randomIndex = Math.floor(Math.random() * this.settings.mandarinTypes.length);
+        const type = this.settings.mandarinTypes[randomIndex];
         
         // Создаем новую мандаринку
         const mandarin = new Mandarin(this, type);
         
+        // Устанавливаем начальную позицию
+        mandarin.x = -mandarin.width;
+        mandarin.y = this.conveyor.y;
+        
+        // Устанавливаем скорость движения
+        mandarin.speedX = this.settings.mandarinSpeed;
+        mandarin.speedY = 0;
+        
         // Добавляем мандаринку в массив
         this.mandarins.push(mandarin);
+        
+        // Уменьшаем количество оставшихся мандаринок
+        this.state.mandarinsLeft--;
+        
+        console.log(`Создана новая мандаринка типа ${type}. Осталось: ${this.state.mandarinsLeft}`);
     }
     
     update(timestamp) {
         // Если игра не запущена, не обновляем
         if (!this.state.isRunning) return;
         
-        // Расчет deltaTime
-        if (!this.lastTimestamp) this.lastTimestamp = timestamp;
+        // Вычисляем deltaTime
+        if (!this.lastTimestamp) {
+            this.lastTimestamp = timestamp;
+        }
         const deltaTime = timestamp - this.lastTimestamp;
         this.lastTimestamp = timestamp;
         
         // Обновляем время игры
         this.state.gameTime += deltaTime;
         
-        // Обновляем общее время простоя чертей
-        this.updateTotalWaitTime(deltaTime);
-        
-        // Обновляем реплику надзирателя
-        this.updateSupervisorQuote(deltaTime);
-        
-        // Очистка канваса
+        // Очищаем канвас
         this.ctx.clearRect(0, 0, this.dom.canvas.width, this.dom.canvas.height);
         
-        // Отрисовка фона
+        // Отрисовываем фон
         this.drawBackground();
         
-        // Обновление и отрисовка конвейера
-        this.conveyor.update(deltaTime);
+        // Обновляем и отрисовываем конвейер
         this.conveyor.draw(this.ctx);
         
-        // Обновление и отрисовка чертей
+        // Обновляем и отрисовываем чертей
         for (const devil of this.devils) {
             devil.update(deltaTime);
             devil.draw(this.ctx);
         }
         
-        // Обновление и отрисовка мандаринок
+        // Обновляем и отрисовываем мандаринки
         for (let i = this.mandarins.length - 1; i >= 0; i--) {
             const mandarin = this.mandarins[i];
-            if (!mandarin.update(deltaTime)) {
-                this.mandarins.splice(i, 1);
-            } else {
-                mandarin.draw(this.ctx);
-            }
+            mandarin.update(deltaTime);
+            mandarin.draw(this.ctx);
         }
         
-        // Обновление и отрисовка эффектов
+        // Обновляем и отрисовываем эффекты
         for (let i = this.effects.length - 1; i >= 0; i--) {
             const effect = this.effects[i];
-            if (!effect.update(deltaTime)) {
-                this.effects.splice(i, 1);
-            } else {
+            const isActive = effect.update(deltaTime);
+            
+            if (isActive) {
                 effect.draw(this.ctx);
+            } else {
+                this.effects.splice(i, 1);
             }
         }
         
-        // Обновление и отрисовка мемкоинов
+        // Обновляем и отрисовываем мемкоины
         for (let i = this.memecoins.length - 1; i >= 0; i--) {
             const memecoin = this.memecoins[i];
-            if (!memecoin.update(deltaTime)) {
-                this.memecoins.splice(i, 1);
-            } else {
+            const isActive = memecoin.update(deltaTime);
+            
+            if (isActive) {
                 memecoin.draw(this.ctx);
+            } else {
+                this.memecoins.splice(i, 1);
             }
         }
         
-        // Отрисовка верхнего блока с надзирателем, репликами и результатами
-        this.drawTopPanel(this.ctx);
-        
-        // Отрисовка логотипа, надписи "King of the Hill" и текущего токена
-        this.drawLogo(this.ctx);
-        
-        // Спавн новых мандаринок
+        // Спавним новые мандаринки
         this.spawnTimer += deltaTime;
         if (this.spawnTimer >= this.settings.spawnInterval && this.state.mandarinsLeft > 0) {
             this.spawnMandarin();
             this.spawnTimer = 0;
         }
         
-        // Проверка окончания игры
+        // Обновляем общее время простоя
+        this.updateTotalWaitTime(deltaTime);
+        
+        // Обновляем реплику надзирателя
+        this.updateSupervisorQuote(deltaTime);
+        
+        // Отрисовываем верхний блок с надзирателем и результатами
+        this.drawTopPanel(this.ctx);
+        
+        // Отрисовываем нижний блок с логотипом и текущим токеном
+        this.drawLogo(this.ctx);
+        
+        // Проверяем условие завершения игры
         if (this.state.mandarinsLeft <= 0 && this.mandarins.length === 0) {
             this.endGame();
             return;
         }
         
-        // Продолжаем игровой цикл
-        requestAnimationFrame(this.update);
+        // Запрашиваем следующий кадр
+        requestAnimationFrame(this.update.bind(this));
     }
     
     draw() {
@@ -499,58 +517,69 @@ class Game {
     }
     
     handleClick(event) {
-        // Проверка, находится ли игра в активном состоянии
-        if (this.state.currentScreen !== 'game' || !this.state.isRunning) return;
+        // Проверяем, запущена ли игра
+        if (!this.state.isRunning) return;
         
         // Получаем координаты клика относительно канваса
         const rect = this.dom.canvas.getBoundingClientRect();
         const x = event.clientX - rect.left;
         const y = event.clientY - rect.top;
         
-        // Проверка клика по черту
+        console.log(`Клик по координатам: (${x}, ${y})`);
+        
+        // Проверяем, был ли клик по черту
         for (let i = 0; i < this.devils.length; i++) {
             const devil = this.devils[i];
             
-            // Проверяем, попал ли клик по черту
-            if (this.isClickOnDevil(x, y, devil)) {
+            // Проверяем, попал ли клик в область черта
+            if (this.isPointInRect(x, y, devil.x - devil.width / 2, devil.y - devil.height / 2, devil.width, devil.height)) {
+                console.log(`Клик по черту ${i}`);
+                
                 // Находим соответствующий перекресток
                 const crossroad = this.conveyor.crossroads[i];
-                
-                if (!crossroad) {
-                    console.error(`Перекресток с индексом ${i} не найден`);
-                    continue;
-                }
                 
                 // Находим ближайшую мандаринку к перекрестку
                 const closestMandarin = this.findClosestMandarinToPoint(crossroad.x);
                 
                 if (closestMandarin) {
-                    // Направляем мандаринку к этому перекрестку
-                    const success = closestMandarin.drop(i);
+                    console.log(`Найдена ближайшая мандаринка: ${closestMandarin.type}`);
                     
-                    // Если успешно, выходим из обработчика
-                    if (success) return;
+                    // Проверяем, не движется ли уже мандаринка
+                    if (closestMandarin.isMovingToPoint || closestMandarin.isDropping) {
+                        console.log("Мандаринка уже в движении");
+                        return;
+                    }
+                    
+                    // Направляем мандаринку к перекрестку
+                    this.sendMandarinToDevil(closestMandarin, i);
                 }
+                
+                return; // Выходим из обработчика после обработки клика по черту
             }
         }
         
-        // Проверка клика по перекрестку
+        // Проверяем, был ли клик по перекрестку
         for (let i = 0; i < this.conveyor.crossroads.length; i++) {
             const crossroad = this.conveyor.crossroads[i];
             
             // Проверяем, попал ли клик в область перекрестка
-            if (
-                x >= crossroad.x - crossroad.width / 2 &&
-                x <= crossroad.x + crossroad.width / 2 &&
-                y >= crossroad.y - crossroad.height / 2 &&
-                y <= crossroad.y + crossroad.height / 2
-            ) {
-                // Находим ближайшую мандаринку к этому перекрестку
+            if (this.isPointInRect(x, y, crossroad.x - crossroad.width / 2, crossroad.y - crossroad.height / 2, crossroad.width, crossroad.height)) {
+                console.log(`Клик по перекрестку ${i}`);
+                
+                // Находим ближайшую мандаринку к перекрестку
                 const closestMandarin = this.findClosestMandarinToPoint(crossroad.x);
                 
                 if (closestMandarin) {
-                    // Направляем мандаринку к этому перекрестку
-                    const success = closestMandarin.drop(i);
+                    console.log(`Найдена ближайшая мандаринка: ${closestMandarin.type}`);
+                    
+                    // Проверяем, не движется ли уже мандаринка
+                    if (closestMandarin.isMovingToPoint || closestMandarin.isDropping) {
+                        console.log("Мандаринка уже в движении");
+                        return;
+                    }
+                    
+                    // Направляем мандаринку к перекрестку и затем к черту
+                    this.sendMandarinToDevil(closestMandarin, i);
                 }
                 
                 break;
@@ -569,45 +598,67 @@ class Game {
     }
     
     updateResultsScreen() {
-        this.dom.totalMandarinsDisplay.textContent = `Всего мандаринок: ${this.settings.totalMandarins}`;
-        this.dom.correctMandarinsDisplay.textContent = `Правильно съедено: ${this.state.correctMandarins}`;
-        this.dom.wrongMandarinsDisplay.textContent = `Неправильно направлено: ${this.state.wrongMandarins}`;
-        this.dom.totalWaitTimeDisplay.textContent = `Общее время ожидания: ${(this.state.totalWaitTime / 1000).toFixed(1)}с`;
+        try {
+            // Добавляем изображение надзирателя
+            const supervisorContainer = document.querySelector('.supervisor-image-container');
+            if (supervisorContainer) {
+                supervisorContainer.innerHTML = '';
+                
+                if (this.resources.images.satan && this.resources.images.satan.complete) {
+                    const img = document.createElement('img');
+                    img.src = this.resources.images.satan.src;
+                    img.alt = 'Надзиратель';
+                    supervisorContainer.appendChild(img);
+                }
+            }
+            
+            // Обновляем текст результатов
+            const earnedMndElement = document.getElementById('earned-mnd');
+            if (earnedMndElement) {
+                earnedMndElement.innerHTML = `Мы заработали <span class="highlight">${this.state.correctMandarins * 10} $MND</span> благодаря <span class="highlight">${this.state.correctMandarins}</span> правильным мандаринкам.`;
+            } else {
+                console.warn('Элемент earned-mnd не найден');
+            }
+            
+            const lostMndElement = document.getElementById('lost-mnd');
+            if (lostMndElement) {
+                lostMndElement.innerHTML = `Но из-за тебя недополучили <span class="highlight">${this.state.wrongMandarins * 10} $MND</span> из-за <span class="highlight">${this.state.wrongMandarins}</span> неправильных мандаринок.`;
+            } else {
+                console.warn('Элемент lost-mnd не найден');
+            }
+            
+            const punishmentElement = document.getElementById('punishment');
+            if (punishmentElement) {
+                // Вычисляем количество криптопалок (1 за каждую неправильную мандаринку + 1 за каждые 5 секунд простоя)
+                const waitTimeSeconds = Math.floor(this.state.totalWaitTime / 1000);
+                const waitTimePenalty = Math.floor(waitTimeSeconds / 5);
+                const totalPunishment = this.state.wrongMandarins + waitTimePenalty;
+                
+                punishmentElement.innerHTML = `Ты приговариваешься к <span class="highlight">${totalPunishment}</span> криптопалкам!`;
+            } else {
+                console.warn('Элемент punishment не найден');
+            }
+        } catch (error) {
+            console.error('Ошибка при обновлении экрана результатов:', error);
+        }
     }
     
     endGame() {
+        console.log('Игра завершена!');
+        
+        // Останавливаем игру
         this.state.isRunning = false;
-        clearInterval(this.spawnTimer);
         
-        // Расчет результатов
-        const earnedPerMandarin = 5; // $MND за каждую правильную мандаринку
-        const lostPerMandarin = 10; // $MND потеряно за каждую неправильную мандаринку
-        
-        const earnedMND = this.state.correctMandarins * earnedPerMandarin;
-        const lostMND = this.state.wrongMandarins * lostPerMandarin;
-        
-        // Обновляем текст на экране результатов
-        const earnedMNDElement = document.getElementById('earned-mnd');
-        const lostMNDElement = document.getElementById('lost-mnd');
-        const punishmentElement = document.getElementById('punishment');
-        
-        earnedMNDElement.innerHTML = `Мы заработали <span class="highlight">${earnedMND} $MND</span> благодаря <span class="highlight">${this.state.correctMandarins}</span> правильным мандаринкам.`;
-        lostMNDElement.innerHTML = `Но из-за тебя недополучили <span class="highlight">${lostMND} $MND</span> из-за <span class="highlight">${this.state.wrongMandarins}</span> неправильных мандаринок.`;
-        punishmentElement.innerHTML = `Ты приговариваешься к <span class="highlight">${this.state.wrongMandarins}</span> криптопалкам!`;
-        
-        // Добавляем изображение надзирателя
-        const supervisorContainer = document.querySelector('.supervisor-image-container');
-        supervisorContainer.innerHTML = ''; // Очищаем контейнер
-        
-        if (this.resources.images.satan && this.resources.images.satan.complete) {
-            const supervisorImage = document.createElement('img');
-            supervisorImage.src = this.resources.images.satan.src;
-            supervisorImage.alt = 'Надзиратель';
-            supervisorContainer.appendChild(supervisorImage);
-        }
+        // Обновляем статистику
+        this.updateStatsDisplay();
         
         // Показываем экран результатов
         this.showScreen('results');
+        
+        // Обновляем экран результатов после небольшой задержки, чтобы DOM успел обновиться
+        setTimeout(() => {
+            this.updateResultsScreen();
+        }, 100);
     }
     
     playSound(name) {
@@ -698,28 +749,21 @@ class Game {
         );
     }
     
-    // Метод для поиска ближайшей мандаринки к перекрестку
+    // Метод для нахождения ближайшей мандаринки к точке
     findClosestMandarinToPoint(x) {
         let closestMandarin = null;
         let minDistance = Infinity;
+        const maxDistance = 60; // Максимальное расстояние для поворота (60% от ширины мандаринки)
         
-        // Перебираем все мандаринки
         for (const mandarin of this.mandarins) {
-            // Пропускаем мандаринки, которые уже падают или движутся к перекрестку
-            if (mandarin.isDropping || mandarin.isMovingToCrossroad) {
-                continue;
-            }
+            // Пропускаем мандаринки, которые уже движутся к точке или падают
+            if (mandarin.isMovingToPoint || mandarin.isDropping) continue;
             
-            // Пропускаем мандаринки, которые еще не появились на экране
-            if (mandarin.x < 0) {
-                continue;
-            }
-            
-            // Вычисляем расстояние от мандаринки до указанной точки по X
+            // Вычисляем расстояние от мандаринки до точки
             const distance = Math.abs(mandarin.x - x);
             
-            // Если это ближайшая мандаринка, запоминаем её
-            if (distance < minDistance) {
+            // Если мандаринка ближе предыдущей ближайшей и находится в пределах максимального расстояния
+            if (distance < minDistance && distance <= maxDistance) {
                 minDistance = distance;
                 closestMandarin = mandarin;
             }
@@ -728,94 +772,14 @@ class Game {
         return closestMandarin;
     }
     
-    // Метод для отрисовки логотипа, надписи "King of the Hill" и текущего токена
-    drawLogo(ctx) {
-        // Рисуем прямоугольник внизу экрана
-        const rectHeight = 60;
-        const rectY = this.dom.canvas.height - rectHeight;
-        
-        // Фон прямоугольника
-        ctx.fillStyle = 'rgba(0, 0, 0, 0.7)'; // Полупрозрачный черный
-        ctx.fillRect(0, rectY, this.dom.canvas.width, rectHeight);
-        
-        // Отрисовка логотипа PumpFun, если он загружен
-        if (this.resources.images.pumpfun && this.resources.images.pumpfun.complete) {
-            const logoSize = 50;
-            const logoX = 20;
-            const logoY = rectY + (rectHeight - logoSize) / 2;
-            
-            ctx.drawImage(
-                this.resources.images.pumpfun,
-                logoX,
-                logoY,
-                logoSize,
-                logoSize
-            );
-        }
-        
-        // Отрисовка текста "King of the Hill"
-        ctx.font = '24px Cornerita';
-        ctx.fillStyle = '#FFFFFF';
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'middle';
-        ctx.fillText('King of the Hill', this.dom.canvas.width / 2, rectY + rectHeight / 3);
-        
-        // Отрисовка текущего токена под надписью "King of the Hill"
-        if (this.currentTokenName) {
-            ctx.save();
-            ctx.font = '18px Cornerita';
-            ctx.fillStyle = '#FFFF00'; // Желтый цвет для токена
-            
-            // Применяем эффект тряски, если нужно
-            if (this.tokenShaking) {
-                const shakeX = (Math.random() - 0.5) * 5;
-                const shakeY = (Math.random() - 0.5) * 5;
-                ctx.translate(shakeX, shakeY);
-            }
-            
-            // Отрисовка текста токена
-            ctx.fillText(this.currentTokenName, this.dom.canvas.width / 2, rectY + rectHeight * 2/3);
-            ctx.restore();
-        }
-    }
-    
-    // Метод для отрисовки фона
-    drawBackground() {
-        if (this.resources.images.background && this.resources.images.background.complete) {
-            this.ctx.drawImage(this.resources.images.background, 0, 0, this.dom.canvas.width, this.dom.canvas.height);
-        } else {
-            this.ctx.fillStyle = '#87CEEB'; // Голубой фон
-            this.ctx.fillRect(0, 0, this.dom.canvas.width, this.dom.canvas.height);
-        }
-    }
-    
-    // Метод для обновления общего времени простоя чертей
-    updateTotalWaitTime(deltaTime) {
-        // Подсчитываем время простоя для каждого черта
-        for (const devil of this.devils) {
-            if (devil.isWaiting) {
-                this.state.totalWaitTime += deltaTime;
-            }
-        }
-    }
-    
-    // Метод для обновления отображения таймера
-    updateTimerDisplay() {
-        // Преобразуем миллисекунды в секунды с одним десятичным знаком
-        const totalWaitTimeSeconds = (this.state.totalWaitTime / 1000).toFixed(1);
-        
-        // Обновляем отображение
-        this.dom.timerDisplay.textContent = `${totalWaitTimeSeconds}с`;
-    }
-    
-    // Метод для отрисовки верхнего блока с надзирателем, репликами и результатами
+    // Метод для отрисовки верхнего блока
     drawTopPanel(ctx) {
-        // Размеры и позиция верхнего блока
-        const panelHeight = this.dom.canvas.height * 0.25;
+        // Размеры и позиция панели
+        const panelHeight = 100;
         const panelY = 0;
         
-        // Фон блока
-        ctx.fillStyle = 'rgba(0, 0, 0, 0.7)'; // Полупрозрачный черный
+        // Фон панели
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
         ctx.fillRect(0, panelY, this.dom.canvas.width, panelHeight);
         
         // Отрисовка изображения надзирателя
@@ -824,8 +788,10 @@ class Game {
             const imageX = 20;
             const imageY = panelY + (panelHeight - imageSize) / 2;
             
-            // Рамка вокруг изображения
-            ctx.strokeStyle = '#4B0082'; // Индиго для рамки
+            // Добавляем неоновую обводку вокруг изображения
+            ctx.strokeStyle = '#8A2BE2'; // Фиолетово-синий цвет
+            ctx.shadowColor = '#8A2BE2';
+            ctx.shadowBlur = 10;
             ctx.lineWidth = 3;
             ctx.strokeRect(imageX - 5, imageY - 5, imageSize + 10, imageSize + 10);
             
@@ -878,6 +844,153 @@ class Game {
         this.wrapText(ctx, this.currentQuote, quoteX, quoteY, quoteWidth, 24);
     }
     
+    // Метод для отрисовки логотипа и текущего токена
+    drawLogo(ctx) {
+        // Размеры и позиция нижней панели
+        const panelHeight = 60;
+        const panelY = this.dom.canvas.height - panelHeight;
+        
+        // Фон панели
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
+        ctx.fillRect(0, panelY, this.dom.canvas.width, panelHeight);
+        
+        // Отрисовка логотипа "King of the Hill"
+        ctx.font = '24px Cornerita';
+        ctx.fillStyle = '#FFFFFF';
+        ctx.textAlign = 'left';
+        ctx.textBaseline = 'middle';
+        ctx.fillText("King of the Hill", 20, panelY + panelHeight / 2);
+        
+        // Отрисовка текущего токена
+        if (this.currentTokenName) {
+            const tokenX = this.dom.canvas.width - 200;
+            const tokenY = panelY + panelHeight / 2;
+            
+            // Фон для токена
+            ctx.fillStyle = 'rgba(75, 0, 130, 0.7)'; // Полупрозрачный индиго
+            ctx.beginPath();
+            ctx.roundRect(tokenX - 10, tokenY - 15, 190, 30, 5);
+            ctx.fill();
+            
+            // Текст токена
+            ctx.font = '20px Cornerita';
+            ctx.fillStyle = '#FFFFFF';
+            ctx.textAlign = 'center';
+            
+            // Добавляем эффект тряски для токена
+            let displayX = tokenX + 85;
+            let displayY = tokenY;
+            
+            if (this.tokenShaking) {
+                displayX += Math.random() * 4 - 2;
+                displayY += Math.random() * 4 - 2;
+            }
+            
+            ctx.fillText(`$${this.currentTokenName}`, displayX, displayY);
+        }
+    }
+    
+    // Метод для отрисовки фона
+    drawBackground() {
+        if (this.resources.images.background && this.resources.images.background.complete) {
+            this.ctx.drawImage(this.resources.images.background, 0, 0, this.dom.canvas.width, this.dom.canvas.height);
+        } else {
+            this.ctx.fillStyle = '#87CEEB'; // Голубой фон
+            this.ctx.fillRect(0, 0, this.dom.canvas.width, this.dom.canvas.height);
+        }
+    }
+    
+    // Метод для обновления общего времени простоя чертей
+    updateTotalWaitTime(deltaTime) {
+        // Подсчитываем время простоя для каждого черта
+        for (const devil of this.devils) {
+            if (devil.isWaiting) {
+                this.state.totalWaitTime += deltaTime;
+            }
+        }
+    }
+    
+    // Метод для обновления отображения таймера
+    updateTimerDisplay() {
+        // Преобразуем миллисекунды в секунды с одним десятичным знаком
+        const totalWaitTimeSeconds = (this.state.totalWaitTime / 1000).toFixed(1);
+        
+        // Обновляем отображение
+        this.dom.timerDisplay.textContent = `${totalWaitTimeSeconds}с`;
+    }
+    
+    // Метод для обновления реплики надзирателя
+    updateSupervisorQuote(deltaTime) {
+        this.quoteTimer += deltaTime;
+        
+        // Если прошло достаточно времени или это первая реплика
+        if (this.quoteTimer >= this.quoteInterval || this.currentQuote === "") {
+            // Выбираем случайную реплику
+            const randomIndex = Math.floor(Math.random() * this.supervisorQuotes.length);
+            this.currentQuote = this.supervisorQuotes[randomIndex];
+            
+            // Сбрасываем таймер
+            this.quoteTimer = 0;
+        }
+    }
+    
+    // Проверим метод isPointInRect
+    isPointInRect(x, y, rectX, rectY, rectWidth, rectHeight) {
+        return (
+            x >= rectX &&
+            x <= rectX + rectWidth &&
+            y >= rectY &&
+            y <= rectY + rectHeight
+        );
+    }
+    
+    // Метод для отправки мандаринки к черту через перекресток
+    sendMandarinToDevil(mandarin, devilIndex) {
+        // Получаем перекресток и черта
+        const crossroad = this.conveyor.crossroads[devilIndex];
+        const devil = this.devils[devilIndex];
+        
+        if (!crossroad || !devil) {
+            console.error(`Перекресток или черт с индексом ${devilIndex} не найден`);
+            return;
+        }
+        
+        // Проверяем расстояние от мандаринки до перекрестка
+        const distance = Math.abs(mandarin.x - crossroad.x);
+        const maxDistance = mandarin.width * 0.6; // 60% от ширины мандаринки
+        
+        if (distance > maxDistance) {
+            console.log(`Мандаринка слишком далеко от перекрестка: ${distance.toFixed(2)}px, максимум: ${maxDistance.toFixed(2)}px`);
+            return;
+        }
+        
+        console.log(`Отправляем мандаринку типа ${mandarin.type} к черту ${devilIndex}, который хочет ${devil.wantedMandarinType}`);
+        
+        // Направляем мандаринку к перекрестку
+        mandarin.moveToPoint(crossroad.x, crossroad.y, () => {
+            // После достижения перекрестка, направляем мандаринку к черту
+            mandarin.dropTo(devil.x, devil.y, () => {
+                // Проверяем, правильная ли мандаринка для этого черта
+                if (mandarin.type === devil.wantedMandarinType) {
+                    console.log(`Черт ${devilIndex} получил правильную мандаринку типа ${mandarin.type}!`);
+                    devil.eatMandarin(mandarin);
+                    this.state.correctMandarins++;
+                    this.state.score += 10;
+                } else {
+                    console.log(`Черт ${devilIndex} получил неправильную мандаринку типа ${mandarin.type}, он хотел ${devil.wantedMandarinType}!`);
+                    devil.rejectMandarin(mandarin);
+                    this.state.wrongMandarins++;
+                }
+                
+                // Удаляем мандаринку из массива
+                const index = this.mandarins.indexOf(mandarin);
+                if (index !== -1) {
+                    this.mandarins.splice(index, 1);
+                }
+            });
+        });
+    }
+    
     // Метод для переноса текста
     wrapText(ctx, text, x, y, maxWidth, lineHeight) {
         const words = text.split(' ');
@@ -899,21 +1012,6 @@ class Game {
         }
         
         ctx.fillText(line, x, y + lineCount * lineHeight);
-    }
-    
-    // Метод для обновления реплики надзирателя
-    updateSupervisorQuote(deltaTime) {
-        this.quoteTimer += deltaTime;
-        
-        // Если прошло достаточно времени или это первая реплика
-        if (this.quoteTimer >= this.quoteInterval || this.currentQuote === "") {
-            // Выбираем случайную реплику
-            const randomIndex = Math.floor(Math.random() * this.supervisorQuotes.length);
-            this.currentQuote = this.supervisorQuotes[randomIndex];
-            
-            // Сбрасываем таймер
-            this.quoteTimer = 0;
-        }
     }
 }
 

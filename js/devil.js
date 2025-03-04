@@ -35,15 +35,17 @@ class Devil {
         this.shakeDuration = 500; // Длительность одного движения (вверх или вниз) в мс
         
         // Желаемый тип мандаринки
-        this.desiredType = this.getRandomType();
+        this.wantedMandarinType = this.getRandomType();
         
         // Изображения
         this.devilImage = this.game.resources.images.devil;
         this.toiletImage = this.game.resources.images.toilet;
         this.bubbleImage = this.game.resources.images.bubble;
-        this.desiredMandarinImage = this.desiredType === 'orange' 
+        this.desiredMandarinImage = this.wantedMandarinType === 'orange' 
             ? this.game.resources.images.orangeMandarin 
             : this.game.resources.images.greenMandarin;
+        
+        console.log(`Создан черт ${this.index}, который хочет мандаринку типа ${this.wantedMandarinType}`);
     }
     
     update(deltaTime) {
@@ -133,7 +135,7 @@ class Devil {
         }
         
         // Отрисовка пузыря с желаемым типом мандаринки только если черт не ест
-        if (this.desiredType && !this.isEating) {
+        if (!this.isEating) {
             this.drawBubble(ctx);
         }
         
@@ -173,17 +175,12 @@ class Devil {
         this.isEating = false;
         this.canEat = true;
         this.isWaiting = true;
-        this.waitTimer = 0; // Сбрасываем таймер ожидания
-        
-        // Останавливаем анимацию тряски и возвращаем черта на место
+        this.waitTimer = 0;
         this.isShaking = false;
-        this.y = this.originalY;
+        this.y = this.originalY; // Возвращаем черта на исходную позицию
         
-        // Смена желаемого типа мандаринки
-        this.desiredType = this.getRandomType();
-        this.desiredMandarinImage = this.desiredType === 'orange' 
-            ? this.game.resources.images.orangeMandarin 
-            : this.game.resources.images.greenMandarin;
+        // Генерируем новый тип мандаринки, который хочет черт
+        this.generateNewWantedType();
     }
     
     finishRejecting() {
@@ -246,13 +243,29 @@ class Devil {
         
         // Желаемая мандаринка в центре пузыря
         const mandarinSize = 40;
-        ctx.drawImage(
-            this.desiredMandarinImage,
-            bubbleX + (bubbleWidth - mandarinSize) / 2,
-            bubbleY + (bubbleHeight - mandarinSize) / 2,
-            mandarinSize,
-            mandarinSize
-        );
+        
+        // Проверяем, что изображение загружено
+        if (this.desiredMandarinImage && this.desiredMandarinImage.complete) {
+            ctx.drawImage(
+                this.desiredMandarinImage,
+                bubbleX + (bubbleWidth - mandarinSize) / 2,
+                bubbleY + (bubbleHeight - mandarinSize) / 2,
+                mandarinSize,
+                mandarinSize
+            );
+        } else {
+            // Запасной вариант - рисуем цветной круг
+            ctx.fillStyle = this.wantedMandarinType === 'orange' ? '#FFA500' : '#00FF00';
+            ctx.beginPath();
+            ctx.arc(
+                bubbleX + bubbleWidth / 2,
+                bubbleY + bubbleHeight / 2,
+                mandarinSize / 2,
+                0,
+                Math.PI * 2
+            );
+            ctx.fill();
+        }
     }
     
     drawWaitingIndicator(ctx) {
@@ -264,5 +277,121 @@ class Devil {
         
         // Рисуем таймер под унитазом, используя originalY
         ctx.fillText(`${waitTimeSeconds}с`, this.x, this.originalY + this.height / 2 + 50);
+    }
+
+    // Метод для поедания мандаринки
+    eatMandarin(mandarin) {
+        // Устанавливаем состояние "ест"
+        this.isEating = true;
+        this.eatingTimer = 0;
+        
+        // Запускаем анимацию тряски
+        this.isShaking = true;
+        this.shakeTimer = 0;
+        
+        // Создаем эффект правильной мандаринки
+        this.game.effects.push({
+            x: this.x,
+            y: this.y,
+            size: 40,
+            alpha: 1,
+            color: '#00ff00', // Зеленый цвет для правильной мандаринки
+            update: function(deltaTime) {
+                this.size += deltaTime * 0.1;
+                this.alpha -= deltaTime * 0.002;
+                return this.alpha > 0;
+            },
+            draw: function(ctx) {
+                ctx.globalAlpha = this.alpha;
+                ctx.fillStyle = this.color;
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.size / 2, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.globalAlpha = 1;
+            }
+        });
+        
+        // Создаем мемкоин
+        this.createMemecoin();
+        
+        // Сбрасываем флаг ожидания
+        this.isWaiting = false;
+        
+        // Генерируем новый тип мандаринки, который хочет черт
+        this.generateNewWantedType();
+    }
+
+    // Метод для создания мемкоина
+    createMemecoin() {
+        // Выбираем случайное название мемкоина
+        let tokenName;
+        
+        // Если все названия уже использованы, сбрасываем список использованных
+        if (this.game.usedMemecoinNames.length >= this.game.memecoinNames.length) {
+            this.game.usedMemecoinNames = [];
+        }
+        
+        // Выбираем случайное неиспользованное название
+        do {
+            tokenName = this.game.memecoinNames[Math.floor(Math.random() * this.game.memecoinNames.length)];
+        } while (this.game.usedMemecoinNames.includes(tokenName));
+        
+        // Добавляем название в список использованных
+        this.game.usedMemecoinNames.push(tokenName);
+        
+        // Устанавливаем текущее название токена
+        this.game.currentTokenName = tokenName;
+        
+        // Запускаем эффект тряски для токена
+        this.game.tokenShaking = true;
+        setTimeout(() => {
+            this.game.tokenShaking = false;
+        }, 500);
+        
+        // Создаем объект мемкоина
+        const memecoin = new Memecoin(this.game, this.x, this.y, tokenName);
+        
+        // Добавляем мемкоин в массив
+        this.game.memecoins.push(memecoin);
+    }
+
+    // Метод для генерации нового типа мандаринки
+    generateNewWantedType() {
+        // Выбираем случайный тип мандаринки
+        this.wantedMandarinType = this.game.settings.mandarinTypes[
+            Math.floor(Math.random() * this.game.settings.mandarinTypes.length)
+        ];
+        
+        // Обновляем изображение желаемой мандаринки
+        this.desiredMandarinImage = this.wantedMandarinType === 'orange' 
+            ? this.game.resources.images.orangeMandarin 
+            : this.game.resources.images.greenMandarin;
+        
+        console.log(`Черт ${this.index} теперь хочет мандаринку типа ${this.wantedMandarinType}`);
+    }
+
+    // Метод для отбрасывания неправильной мандаринки
+    rejectMandarin(mandarin) {
+        // Создаем эффект неправильной мандаринки
+        this.game.effects.push({
+            x: this.x,
+            y: this.y,
+            size: 40,
+            alpha: 1,
+            color: '#ff0000', // Красный цвет для неправильной мандаринки
+            update: function(deltaTime) {
+                this.size += deltaTime * 0.1;
+                this.alpha -= deltaTime * 0.002;
+                return this.alpha > 0;
+            },
+            draw: function(ctx) {
+                ctx.globalAlpha = this.alpha;
+                ctx.fillStyle = this.color;
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.size / 2, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.globalAlpha = 1;
+            }
+        });
     }
 } 

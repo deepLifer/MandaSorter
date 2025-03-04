@@ -11,24 +11,22 @@ class Mandarin {
         this.height = 40;
         
         // Скорость движения
-        this.speed = this.game.settings.mandarinSpeed;
+        this.speedX = this.game.settings.mandarinSpeed;
+        this.speedY = 0;
         
         // Состояние
+        this.isMovingToPoint = false;
         this.isDropping = false;
-        this.isEaten = false; // Флаг, указывающий, что мандаринка съедена
-        this.targetDevilIndex = undefined; // Индекс черта, к которому направляется мандаринка
-        
-        // Добавляем новые состояния
-        this.isMovingToCrossroad = false;
-        this.targetX = 0; // Целевая позиция X при движении к перекрестку
+        this.targetX = 0;
+        this.targetY = 0;
+        this.callback = null;
         
         // Изображение
         this.image = this.type === 'orange' 
             ? this.game.resources.images.orangeMandarin 
             : this.game.resources.images.greenMandarin;
         
-        // Убираем сообщение о создании мандаринки
-        // console.log(`Создана мандаринка типа ${this.type} на позиции (${this.x}, ${this.y})`);
+        console.log(`Создана мандаринка типа ${this.type} на позиции (${this.x}, ${this.y})`);
     }
     
     update(deltaTime) {
@@ -46,13 +44,13 @@ class Mandarin {
                 console.log(`Мандаринка достигла перекрестка и начинает падение к черту ${this.targetDevilIndex}`);
             } else {
                 // Движение к перекрестку
-                this.x += Math.sign(dx) * this.speed;
+                this.x += Math.sign(dx) * this.speedX;
             }
         }
         // Если мандаринка падает
         else if (this.isDropping) {
             // Движение вниз
-            this.y += this.speed;
+            this.y += this.speedX;
             
             // Проверка столкновения с чертом
             if (this.targetDevilIndex !== undefined) {
@@ -99,7 +97,7 @@ class Mandarin {
         // Обычное движение по конвейеру
         else {
             // Движение вправо
-            this.x += this.speed;
+            this.x += this.speedX;
             
             // Проверка выхода за пределы экрана
             if (this.x > this.game.dom.canvas.width) {
@@ -229,6 +227,172 @@ class Mandarin {
         const index = this.game.mandarins.indexOf(this);
         if (index !== -1) {
             this.game.mandarins.splice(index, 1);
+        }
+    }
+
+    // Метод для перемещения мандаринки к указанной точке
+    moveToPoint(targetX, targetY, callback) {
+        // Если мандаринка уже находится в точке назначения, сразу вызываем callback
+        if (Math.abs(this.x - targetX) < 5 && Math.abs(this.y - targetY) < 5) {
+            this.x = targetX;
+            this.y = targetY;
+            if (callback) callback();
+            return;
+        }
+        
+        // Сохраняем текущее состояние движения
+        this.originalPath = {
+            x: this.x,
+            y: this.y,
+            speedX: this.speedX,
+            speedY: this.speedY
+        };
+        
+        // Устанавливаем новую цель
+        this.targetX = targetX;
+        this.targetY = targetY;
+        this.callback = callback;
+        
+        // Останавливаем движение по конвейеру
+        this.speedX = 0;
+        
+        // Устанавливаем флаг, что мандаринка движется к точке
+        this.isMovingToPoint = true;
+        
+        console.log(`Мандаринка ${this.type} начала движение к точке (${targetX}, ${targetY})`);
+    }
+
+    // Метод для обновления движения к точке
+    updateMovementToPoint(deltaTime) {
+        if (!this.isMovingToPoint) return;
+        
+        // Вычисляем направление к цели
+        const dx = this.targetX - this.x;
+        const dy = this.targetY - this.y;
+        const distance = Math.sqrt(dx * dx + dy * dy);
+        
+        // Если мандаринка достигла цели
+        if (distance < 5) {
+            this.x = this.targetX;
+            this.y = this.targetY;
+            this.isMovingToPoint = false;
+            
+            console.log(`Мандаринка ${this.type} достигла точки (${this.targetX}, ${this.targetY})`);
+            
+            // Вызываем callback, если он есть
+            if (this.callback) {
+                const callbackToExecute = this.callback;
+                this.callback = null; // Очищаем callback перед вызовом, чтобы избежать повторного вызова
+                callbackToExecute();
+            }
+            
+            return;
+        }
+        
+        // Вычисляем скорость движения к цели
+        const speed = this.game.settings.mandarinSpeed; // Используем ту же скорость, что и при обычном движении
+        const moveX = (dx / distance) * speed;
+        const moveY = (dy / distance) * speed;
+        
+        // Перемещаем мандаринку
+        this.x += moveX;
+        this.y += moveY;
+    }
+
+    // Метод для падения мандаринки к черту
+    dropTo(targetX, targetY, callback) {
+        // Сохраняем текущее состояние движения
+        this.originalPath = {
+            x: this.x,
+            y: this.y,
+            speedX: this.speedX,
+            speedY: this.speedY
+        };
+        
+        // Устанавливаем новую цель
+        this.targetX = targetX;
+        this.targetY = targetY;
+        this.callback = callback;
+        
+        // Останавливаем движение по конвейеру
+        this.speedX = 0;
+        this.speedY = 0;
+        
+        // Устанавливаем флаг, что мандаринка падает
+        this.isDropping = true;
+        
+        // Устанавливаем начальную скорость падения
+        this.dropSpeedY = 0;
+        this.gravity = 0.2;
+        
+        console.log(`Мандаринка ${this.type} начала падение к точке (${targetX}, ${targetY})`);
+    }
+
+    // Метод для обновления падения
+    updateDropping(deltaTime) {
+        if (!this.isDropping) return;
+        
+        // Вычисляем направление к цели
+        const dx = this.targetX - this.x;
+        const dy = this.targetY - this.y;
+        const distance = Math.sqrt(dx * dx + dy * dy);
+        
+        // Если мандаринка достигла цели
+        if (distance < 5) {
+            this.x = this.targetX;
+            this.y = this.targetY;
+            this.isDropping = false;
+            
+            console.log(`Мандаринка ${this.type} достигла точки (${this.targetX}, ${this.targetY})`);
+            
+            // Вызываем callback, если он есть
+            if (this.callback) {
+                const callbackToExecute = this.callback;
+                this.callback = null; // Очищаем callback перед вызовом, чтобы избежать повторного вызова
+                callbackToExecute();
+            }
+            
+            return;
+        }
+        
+        // Увеличиваем скорость падения (гравитация)
+        this.dropSpeedY += this.gravity;
+        
+        // Вычисляем скорость движения к цели по X
+        const speed = this.game.settings.mandarinSpeed;
+        const moveX = (dx / distance) * speed;
+        
+        // Перемещаем мандаринку
+        this.x += moveX;
+        this.y += this.dropSpeedY;
+    }
+
+    // Обновляем метод update для вызова новых методов
+    update(deltaTime) {
+        // Если мандаринка движется к точке
+        if (this.isMovingToPoint) {
+            this.updateMovementToPoint(deltaTime);
+            return;
+        }
+        
+        // Если мандаринка падает
+        if (this.isDropping) {
+            this.updateDropping(deltaTime);
+            return;
+        }
+        
+        // Обычное движение по конвейеру
+        this.x += this.speedX;
+        this.y += this.speedY;
+        
+        // Проверка выхода за границы экрана
+        if (this.x > this.game.dom.canvas.width + this.width) {
+            // Удаляем мандаринку, если она вышла за правую границу
+            const index = this.game.mandarins.indexOf(this);
+            if (index !== -1) {
+                this.game.mandarins.splice(index, 1);
+                this.game.state.wrongMandarins++;
+            }
         }
     }
 } 
