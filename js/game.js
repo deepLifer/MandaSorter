@@ -82,7 +82,7 @@ class Game {
         this.loadFont('Cornerita', 'assets/fonts/Cornerita.ttf');
         
         // Добавляем переменные для отслеживания текущего токена
-        this.currentTokenName = null;
+        this.currentTokenName = "YASC";
         this.tokenShaking = false;
         this.lastTimestamp = null; // Для расчета deltaTime
         
@@ -146,21 +146,43 @@ class Game {
         this.loadResources();
         
         // Добавление обработчиков событий
-        window.addEventListener('resize', () => this.resizeCanvas());
-        this.dom.startButton.addEventListener('click', () => this.startGame());
-        this.dom.howToPlayButton.addEventListener('click', () => this.showScreen('howToPlay'));
-        this.dom.backToMenuButton.addEventListener('click', () => this.showScreen('start'));
-        this.dom.playAgainButton.addEventListener('click', () => this.startGame());
-        
-        // Проверяем, существует ли кнопка меню
-        if (this.dom.menuButton) {
-            this.dom.menuButton.addEventListener('click', () => this.showScreen('start'));
-        }
-        
-        // Исправляем привязку обработчика кликов, чтобы сохранить контекст this
-        this.dom.canvas.addEventListener('click', (event) => this.handleClick(event));
+        this.initEventListeners();
         
         console.log("Инициализация игры завершена, обработчики событий установлены");
+    }
+    
+    initEventListeners() {
+        // Обработчик клика по канвасу
+        this.dom.canvas.addEventListener('click', this.handleClick.bind(this));
+        
+        // Обработчик клика по кнопке "Начать игру"
+        this.dom.startButton.addEventListener('click', () => {
+            console.log('Нажата кнопка "Начать игру"');
+            this.startGame();
+        });
+        
+        // Обработчик клика по кнопке "Как играть"
+        this.dom.howToPlayButton.addEventListener('click', () => {
+            console.log('Нажата кнопка "Как играть"');
+            this.showScreen('howToPlay');
+        });
+        
+        // Обработчик клика по кнопке "Назад в меню"
+        this.dom.backToMenuButton.addEventListener('click', () => {
+            console.log('Нажата кнопка "Назад в меню"');
+            this.showScreen('start');
+        });
+        
+        // Обработчик клика по кнопке "Играть снова"
+        this.dom.playAgainButton.addEventListener('click', () => {
+            console.log('Нажата кнопка "Играть снова"');
+            this.startGame();
+        });
+        
+        // Обработчик изменения размера окна
+        window.addEventListener('resize', () => {
+            this.resizeCanvas();
+        });
     }
     
     loadResources() {
@@ -177,7 +199,8 @@ class Game {
             { name: 'poop', src: 'assets/images/poop.png' },
             { name: 'pumpfun', src: 'assets/images/pumpfun.png' },
             { name: 'logo', src: 'assets/images/logo.png' },
-            { name: 'satan', src: 'assets/images/satan.png' } // Добавляем изображение надзирателя
+            { name: 'satan', src: 'assets/images/satan.png' },
+            { name: 'pumpfun', src: 'assets/images/pumpfun.png' }
         ];
         
         this.resources.toLoad = imagesToLoad.length;
@@ -275,44 +298,65 @@ class Game {
     }
     
     startGame() {
-        // Сброс состояния игры
+        console.log('Начинаем игру!');
+        
+        // Сбрасываем состояние игры
         this.state.mandarinsLeft = this.settings.totalMandarins;
         this.state.score = 0;
         this.state.correctMandarins = 0;
         this.state.wrongMandarins = 0;
         this.state.totalWaitTime = 0;
-        this.state.isRunning = true;
         this.state.gameTime = 0;
+        this.state.isRunning = true;
         
-        // Скрываем старый блок статистики
-        const gameStats = document.getElementById('game-stats');
-        if (gameStats) {
-            gameStats.style.display = 'none';
-        }
-        
-        // Сброс игровых объектов
-        this.conveyor = new Conveyor(this);
-        this.devils = [];
+        // Очищаем массивы объектов
         this.mandarins = [];
         this.effects = [];
         this.memecoins = [];
+        this.usedMemecoinNames = [];
+        
+        // Сбрасываем таймеры
+        this.spawnTimer = 0;
+        this.quoteTimer = 0;
+        this.lastTimestamp = null;
+        
+        // Показываем игровой экран
+        this.showScreen('game');
+        
+        // Создаем конвейер примерно на середине экрана
+        const topPanelHeight = 100; // Высота верхней панели с надзирателем
+        const statsPanelHeight = 40; // Высота панели статистики
+        
+        // Вычисляем позицию конвейера так, чтобы он был примерно на середине экрана
+        // Учитываем высоту верхней панели, панели статистики и нижней панели (60px)
+        const availableHeight = this.dom.canvas.height - topPanelHeight - statsPanelHeight - 60;
+        const conveyorY = topPanelHeight + statsPanelHeight + (availableHeight * 0.4); // 40% от доступной высоты
+        
+        this.conveyor = new Conveyor(this);
+        this.conveyor.y = conveyorY;
         
         // Создаем чертей
-        const devilCount = 2;
-        const canvasWidth = this.dom.canvas.width;
+        this.devils = [];
         
-        // Очищаем существующие перекрестки
-        this.conveyor.crossroads = [];
-        
-        for (let i = 0; i < devilCount; i++) {
+        // Создаем двух чертей
+        for (let i = 0; i < 2; i++) {
             const devil = new Devil(this, i);
             
-            // Равномерно распределяем чертей по ширине канваса
-            devil.x = canvasWidth * (i + 1) / (devilCount + 1);
+            // Позиционируем чертей равномерно по ширине экрана
+            const spacing = this.dom.canvas.width / 3;
+            devil.x = spacing * (i + 1);
+            
+            // Позиционируем чертей ниже конвейера
+            devil.y = conveyorY + 150; // Расстояние от конвейера до чертей
+            devil.originalY = devil.y; // Сохраняем исходную позицию Y для анимации
             
             this.devils.push(devil);
-            
-            // Добавляем перекресток прямо над чертом
+        }
+        
+        // Создаем перекрестки над чертями
+        this.conveyor.crossroads = [];
+        for (let i = 0; i < this.devils.length; i++) {
+            const devil = this.devils[i];
             this.conveyor.crossroads.push({
                 x: devil.x,
                 y: this.conveyor.y,
@@ -323,26 +367,14 @@ class Game {
             });
         }
         
-        // Обновляем ответвления от перекрестков к чертям
-        if (typeof this.conveyor.updateBranches === 'function') {
-            this.conveyor.updateBranches();
-        }
+        // Обновляем ответвления конвейера к чертям
+        this.conveyor.updateBranches();
         
-        console.log("Игра запущена, перекрестки созданы:", this.conveyor.crossroads);
-        
-        // Сброс таймера для спавна мандаринок
-        this.spawnTimer = 0;
-        
-        // Сброс таймера для смены реплик надзирателя
-        this.quoteTimer = 0;
-        this.currentQuote = "";
-        
-        // Показываем игровой экран
-        this.showScreen('game');
+        // Обновляем отображение статистики
+        this.updateStatsDisplay();
         
         // Запускаем игровой цикл
-        this.lastTimestamp = null;
-        requestAnimationFrame(this.update);
+        requestAnimationFrame(this.update.bind(this));
     }
     
     spawnMandarin() {
@@ -392,6 +424,12 @@ class Game {
         
         // Отрисовываем фон
         this.drawBackground();
+        
+        // Отрисовываем верхний блок с надзирателем
+        this.drawTopPanel(this.ctx);
+        
+        // Отрисовываем панель статистики
+        this.drawStatsPanel(this.ctx);
         
         // Обновляем и отрисовываем конвейер
         this.conveyor.draw(this.ctx);
@@ -445,9 +483,6 @@ class Game {
         
         // Обновляем реплику надзирателя
         this.updateSupervisorQuote(deltaTime);
-        
-        // Отрисовываем верхний блок с надзирателем и результатами
-        this.drawTopPanel(this.ctx);
         
         // Отрисовываем нижний блок с логотипом и текущим токеном
         this.drawLogo(this.ctx);
@@ -517,72 +552,82 @@ class Game {
     }
     
     handleClick(event) {
-        // Проверяем, запущена ли игра
-        if (!this.state.isRunning) return;
-        
         // Получаем координаты клика относительно канваса
         const rect = this.dom.canvas.getBoundingClientRect();
         const x = event.clientX - rect.left;
         const y = event.clientY - rect.top;
         
-        console.log(`Клик по координатам: (${x}, ${y})`);
+        console.log(`Клик по координатам (${x}, ${y})`);
         
-        // Проверяем, был ли клик по черту
+        // Если игра не запущена, игнорируем клики по канвасу
+        if (!this.state.isRunning) return;
+        
+        // Проверяем клик по перекрестку
+        const crossroadIndex = this.conveyor.isCrossroadClicked(x, y);
+        if (crossroadIndex !== -1) {
+            console.log(`Клик по перекрестку ${crossroadIndex}`);
+            
+            // Находим ближайшую мандаринку к перекрестку
+            const closestMandarin = this.findClosestMandarinToPoint(this.conveyor.crossroads[crossroadIndex].x);
+            
+            if (closestMandarin) {
+                console.log(`Найдена ближайшая мандаринка типа ${closestMandarin.type}`);
+                this.sendMandarinToDevil(closestMandarin, crossroadIndex);
+            } else {
+                console.log('Нет подходящих мандаринок рядом с перекрестком');
+            }
+            return; // Добавляем return, чтобы не проверять клик по черту, если уже был клик по перекрестку
+        }
+        
+        // Проверяем клик по черту
         for (let i = 0; i < this.devils.length; i++) {
             const devil = this.devils[i];
             
-            // Проверяем, попал ли клик в область черта
-            if (this.isPointInRect(x, y, devil.x - devil.width / 2, devil.y - devil.height / 2, devil.width, devil.height)) {
+            // Проверяем, находится ли клик в пределах черта
+            if (
+                x >= devil.x - devil.width / 2 &&
+                x <= devil.x + devil.width / 2 &&
+                y >= devil.y - devil.height / 2 &&
+                y <= devil.y + devil.height / 2
+            ) {
                 console.log(`Клик по черту ${i}`);
                 
-                // Находим соответствующий перекресток
-                const crossroad = this.conveyor.crossroads[i];
-                
-                // Находим ближайшую мандаринку к перекрестку
-                const closestMandarin = this.findClosestMandarinToPoint(crossroad.x);
-                
-                if (closestMandarin) {
-                    console.log(`Найдена ближайшая мандаринка: ${closestMandarin.type}`);
+                // Если черт ждет, показываем подсказку и направляем к нему ближайшую мандаринку
+                if (devil.isWaiting) {
+                    console.log(`Черт ${i} хочет мандаринку типа ${devil.wantedMandarinType}`);
                     
-                    // Проверяем, не движется ли уже мандаринка
-                    if (closestMandarin.isMovingToPoint || closestMandarin.isDropping) {
-                        console.log("Мандаринка уже в движении");
-                        return;
+                    // Создаем эффект подсказки
+                    this.effects.push({
+                        x: devil.x,
+                        y: devil.y - devil.height / 2 - 30,
+                        size: 30,
+                        alpha: 1,
+                        color: devil.wantedMandarinType === 'orange' ? '#FFA500' : '#00FF00',
+                        update: function(deltaTime) {
+                            this.alpha -= deltaTime * 0.002;
+                            return this.alpha > 0;
+                        },
+                        draw: function(ctx) {
+                            ctx.globalAlpha = this.alpha;
+                            ctx.fillStyle = this.color;
+                            ctx.beginPath();
+                            ctx.arc(this.x, this.y, this.size / 2, 0, Math.PI * 2);
+                            ctx.fill();
+                            ctx.globalAlpha = 1;
+                        }
+                    });
+                    
+                    // Находим ближайшую мандаринку к перекрестку над этим чертом
+                    const crossroad = this.conveyor.crossroads[i];
+                    const closestMandarin = this.findClosestMandarinToPoint(crossroad.x);
+                    
+                    if (closestMandarin) {
+                        console.log(`Найдена ближайшая мандаринка типа ${closestMandarin.type} для черта ${i}`);
+                        this.sendMandarinToDevil(closestMandarin, i);
                     }
-                    
-                    // Направляем мандаринку к перекрестку
-                    this.sendMandarinToDevil(closestMandarin, i);
                 }
                 
                 return; // Выходим из обработчика после обработки клика по черту
-            }
-        }
-        
-        // Проверяем, был ли клик по перекрестку
-        for (let i = 0; i < this.conveyor.crossroads.length; i++) {
-            const crossroad = this.conveyor.crossroads[i];
-            
-            // Проверяем, попал ли клик в область перекрестка
-            if (this.isPointInRect(x, y, crossroad.x - crossroad.width / 2, crossroad.y - crossroad.height / 2, crossroad.width, crossroad.height)) {
-                console.log(`Клик по перекрестку ${i}`);
-                
-                // Находим ближайшую мандаринку к перекрестку
-                const closestMandarin = this.findClosestMandarinToPoint(crossroad.x);
-                
-                if (closestMandarin) {
-                    console.log(`Найдена ближайшая мандаринка: ${closestMandarin.type}`);
-                    
-                    // Проверяем, не движется ли уже мандаринка
-                    if (closestMandarin.isMovingToPoint || closestMandarin.isDropping) {
-                        console.log("Мандаринка уже в движении");
-                        return;
-                    }
-                    
-                    // Направляем мандаринку к перекрестку и затем к черту
-                    this.sendMandarinToDevil(closestMandarin, i);
-                }
-                
-                break;
             }
         }
     }
@@ -805,35 +850,11 @@ class Game {
             );
         }
         
-        // Отрисовка блока с результатами (перемещаем перед текстовым блоком)
-        const resultsX = this.dom.canvas.width - 200;
-        const resultsY = panelY + 20;
-        
-        // Добавляем фон для блока результатов, чтобы текст не перекрывался
-        ctx.fillStyle = 'rgba(0, 0, 0, 0.5)'; // Полупрозрачный черный
-        ctx.fillRect(resultsX - 10, resultsY - 10, 190, 95);
-        
-        // Добавляем рамку для блока результатов
-        ctx.strokeStyle = '#4B0082'; // Индиго для рамки
-        ctx.lineWidth = 2;
-        ctx.strokeRect(resultsX - 10, resultsY - 10, 190, 95);
-        
-        ctx.font = '16px Cornerita';
-        ctx.fillStyle = '#FFFFFF';
-        ctx.textAlign = 'left';
-        
-        // Преобразуем миллисекунды в секунды с одним десятичным знаком для отображения
-        const totalWaitTimeSeconds = (this.state.totalWaitTime / 1000).toFixed(1);
-        
-        ctx.fillText(`Осталось: ${this.state.mandarinsLeft}`, resultsX, resultsY);
-        ctx.fillText(`Простой: ${totalWaitTimeSeconds}с`, resultsX, resultsY + 25);
-        ctx.fillText(`Правильно: ${this.state.correctMandarins}`, resultsX, resultsY + 50);
-        ctx.fillText(`Неправильно: ${this.state.wrongMandarins}`, resultsX, resultsY + 75);
-        
-        // Отрисовка текстового блока с репликой
-        const quoteX = 20 + panelHeight * 0.8 + 20; // После изображения + отступ
-        const quoteY = panelY + panelHeight * 0.3;
-        const quoteWidth = this.dom.canvas.width - quoteX - 220; // Уменьшаем ширину, чтобы не перекрывать блок результатов
+        // Отрисовка текста реплики надзирателя
+        const quoteX = 150;
+        const quoteY = panelY + 30;
+        // Увеличиваем ширину текстового блока, оставляя небольшой отступ справа
+        const quoteWidth = this.dom.canvas.width - quoteX - 50; // Было 220, стало 50
         
         ctx.font = '18px Cornerita';
         ctx.fillStyle = '#FFFFFF';
@@ -854,12 +875,34 @@ class Game {
         ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
         ctx.fillRect(0, panelY, this.dom.canvas.width, panelHeight);
         
-        // Отрисовка логотипа "King of the Hill"
-        ctx.font = '24px Cornerita';
-        ctx.fillStyle = '#FFFFFF';
-        ctx.textAlign = 'left';
-        ctx.textBaseline = 'middle';
-        ctx.fillText("King of the Hill", 20, panelY + panelHeight / 2);
+        // Отрисовка иконки Pumpfun
+        if (this.resources.images.pumpfun && this.resources.images.pumpfun.complete) {
+            const iconSize = 40;
+            const iconX = 20;
+            const iconY = panelY + (panelHeight - iconSize) / 2;
+            
+            ctx.drawImage(
+                this.resources.images.pumpfun,
+                iconX,
+                iconY,
+                iconSize,
+                iconSize
+            );
+            
+            // Отрисовка логотипа "King of the Hill" после иконки
+            ctx.font = '24px Cornerita';
+            ctx.fillStyle = '#FFFFFF';
+            ctx.textAlign = 'left';
+            ctx.textBaseline = 'middle';
+            ctx.fillText("King of the Hill", iconX + iconSize + 10, panelY + panelHeight / 2);
+        } else {
+            // Если иконка не загружена, просто отрисовываем логотип
+            ctx.font = '24px Cornerita';
+            ctx.fillStyle = '#FFFFFF';
+            ctx.textAlign = 'left';
+            ctx.textBaseline = 'middle';
+            ctx.fillText("King of the Hill", 20, panelY + panelHeight / 2);
+        }
         
         // Отрисовка текущего токена
         if (this.currentTokenName) {
@@ -886,7 +929,7 @@ class Game {
                 displayY += Math.random() * 4 - 2;
             }
             
-            ctx.fillText(`$${this.currentTokenName}`, displayX, displayY);
+            ctx.fillText(`${this.currentTokenName}`, displayX, displayY);
         }
     }
     
@@ -1012,6 +1055,50 @@ class Game {
         }
         
         ctx.fillText(line, x, y + lineCount * lineHeight);
+    }
+    
+    // Метод для отрисовки панели статистики
+    drawStatsPanel(ctx) {
+        // Размеры и позиция панели статистики
+        const panelHeight = 40;
+        const panelY = 100; // Сразу после верхнего блока, который имеет высоту 100px
+        
+        // Фон панели
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
+        ctx.fillRect(0, panelY, this.dom.canvas.width, panelHeight);
+        
+        // Отрисовка статистики
+        ctx.font = '16px Cornerita';
+        ctx.fillStyle = '#FFFFFF';
+        ctx.textAlign = 'left';
+        ctx.textBaseline = 'middle';
+        
+        // Отображаем статистику в одну строку с равными интервалами
+        const statsItems = [
+            `Осталось: ${this.state.mandarinsLeft}`,
+            `Правильно: ${this.state.correctMandarins}`,
+            `Неправильно: ${this.state.wrongMandarins}`,
+            `Простой: ${(this.state.totalWaitTime / 1000).toFixed(1)}с`
+        ];
+        
+        const itemWidth = this.dom.canvas.width / statsItems.length;
+        
+        statsItems.forEach((item, index) => {
+            ctx.fillText(item, 20 + index * itemWidth, panelY + panelHeight / 2);
+        });
+        
+        // Отрисовка индикатора прогресса
+        const progressHeight = 6;
+        const progressY = panelY + panelHeight - progressHeight;
+        
+        // Фон индикатора
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.3)';
+        ctx.fillRect(0, progressY, this.dom.canvas.width, progressHeight);
+        
+        // Заполнение индикатора
+        const progress = (this.settings.totalMandarins - this.state.mandarinsLeft) / this.settings.totalMandarins;
+        ctx.fillStyle = '#4CAF50'; // Зеленый цвет для прогресса
+        ctx.fillRect(0, progressY, this.dom.canvas.width * progress, progressHeight);
     }
 }
 

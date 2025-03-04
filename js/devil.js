@@ -162,7 +162,8 @@ class Devil {
         setTimeout(() => {
             // Создаем мемкоин под чертом
             console.log("Создаем мемкоин после поедания мандаринки");
-            this.game.createMemecoin(this.x, this.y + this.height / 2);
+            //this.game.createMemecoin(this.x, this.y + this.height / 2);
+            this.game.createMemecoin(this.x, this.y);
         }, this.game.settings.eatingTime / 2); // Создаем мемкоин в середине анимации еды
     }
     

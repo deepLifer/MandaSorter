@@ -76,24 +76,21 @@ class Conveyor {
         });
     }
     
-    // Метод для обновления ответвлений (вызывается при старте игры)
+    // Метод для обновления ответвлений от перекрестков к чертям
     updateBranches() {
         this.branches = [];
         
         // Для каждого перекрестка создаем ответвление к соответствующему черту
-        for (let i = 0; i < this.crossroads.length; i++) {
+        for (let i = 0; i < this.crossroads.length && i < this.game.devils.length; i++) {
             const crossroad = this.crossroads[i];
             const devil = this.game.devils[i];
             
-            if (devil) {
-                this.branches.push({
-                    startX: crossroad.x,
-                    startY: this.y,
-                    endX: devil.x,
-                    endY: devil.y - devil.height / 2, // Верхняя точка черта
-                    width: 30 // Ширина ответвления
-                });
-            }
+            this.branches.push({
+                startX: crossroad.x,
+                startY: crossroad.y,
+                endX: devil.x,
+                endY: devil.y - devil.height / 2
+            });
         }
     }
     
