@@ -3,9 +3,9 @@ class Game {
     constructor() {
         // Настройки игры
         this.settings = {
-            totalMandarins: 100,
+            totalMandarins: 50,
             mandarinTypes: ['orange', 'green'],
-            mandarinSpeed: 2,
+            mandarinSpeed: 4,
             spawnInterval: 2000, // в миллисекундах
             eatingTime: 3000 // в миллисекундах
         };
@@ -243,15 +243,13 @@ class Game {
         const deltaTime = timestamp - this.lastTime;
         this.lastTime = timestamp;
         
-        // Обновление таймера ожидания черта
-        if (this.devil && this.devil.isWaiting) {
-            this.state.totalWaitTime += deltaTime;
-            this.updateStatsDisplay();
-        }
-        
         // Обновление игровых объектов
         this.conveyor.update(deltaTime);
         this.devil.update(deltaTime);
+        
+        // В конце игры обновляем общее время ожидания
+        this.state.totalWaitTime = this.devil.waitTimer;
+        this.updateStatsDisplay();
         
         // Обновление мандаринок
         for (let i = this.mandarins.length - 1; i >= 0; i--) {
@@ -337,7 +335,7 @@ class Game {
     updateStatsDisplay() {
         this.dom.mandarinsLeftDisplay.textContent = `Осталось: ${this.state.mandarinsLeft}`;
         this.dom.scoreDisplay.textContent = `Счёт: ${this.state.score}`;
-        this.dom.timerDisplay.textContent = `Время ожидания: ${Math.floor(this.state.totalWaitTime / 1000)}с`;
+        this.dom.timerDisplay.textContent = `Время ожидания: ${(this.state.totalWaitTime / 1000).toFixed(1)}с`;
         
         // Обновляем индикатор прогресса
         const progress = (this.settings.totalMandarins - this.state.mandarinsLeft) / this.settings.totalMandarins * 100;
@@ -348,7 +346,7 @@ class Game {
         this.dom.totalMandarinsDisplay.textContent = `Всего мандаринок: ${this.settings.totalMandarins}`;
         this.dom.correctMandarinsDisplay.textContent = `Правильно съедено: ${this.state.correctMandarins}`;
         this.dom.wrongMandarinsDisplay.textContent = `Неправильно направлено: ${this.state.wrongMandarins}`;
-        this.dom.totalWaitTimeDisplay.textContent = `Общее время ожидания: ${Math.floor(this.state.totalWaitTime / 1000)}с`;
+        this.dom.totalWaitTimeDisplay.textContent = `Общее время ожидания: ${(this.state.totalWaitTime / 1000).toFixed(1)}с`;
     }
     
     endGame() {
