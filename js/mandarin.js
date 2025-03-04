@@ -13,6 +13,11 @@ class Mandarin {
         // Состояние
         this.isDropping = false;
         this.dropSpeed = 5;
+        this.targetDevilIndex = undefined; // Индекс черта, к которому направляется мандаринка
+        
+        // Добавляем новые состояния
+        this.isMovingToCrossroad = false;
+        this.targetCrossroadX = 0;
         
         // Изображение
         this.image = this.type === 'orange' 
@@ -21,12 +26,44 @@ class Mandarin {
     }
     
     update(deltaTime) {
-        if (this.isDropping) {
+        if (this.isMovingToCrossroad) {
+            // Если мандаринка движется к центру перекрестка
+            const moveSpeed = this.game.settings.mandarinSpeed;
+            
+            // Определяем направление движения
+            if (this.x < this.targetCrossroadX) {
+                this.x += moveSpeed;
+                if (this.x >= this.targetCrossroadX) {
+                    this.x = this.targetCrossroadX;
+                    this.isMovingToCrossroad = false;
+                    this.isDropping = true;
+                }
+            } else if (this.x > this.targetCrossroadX) {
+                this.x -= moveSpeed;
+                if (this.x <= this.targetCrossroadX) {
+                    this.x = this.targetCrossroadX;
+                    this.isMovingToCrossroad = false;
+                    this.isDropping = true;
+                }
+            } else {
+                // Если мандаринка уже в центре перекрестка
+                this.isMovingToCrossroad = false;
+                this.isDropping = true;
+            }
+        } else if (this.isDropping) {
             // Если мандаринка падает
             this.y += this.dropSpeed;
             
+            // Если targetDevilIndex не определен, определяем ближайшего черта
+            if (this.targetDevilIndex === undefined) {
+                this.targetDevilIndex = this.game.conveyor.getClosestCrossroadIndex(this.x);
+            }
+            
+            // Получаем черта, к которому направляется мандаринка
+            const devil = this.game.devils[this.targetDevilIndex];
+            
             // Проверка на достижение черта
-            if (this.y >= this.game.devil.y) {
+            if (this.y >= devil.y) {
                 this.reachDevil();
             }
         } else {
@@ -45,9 +82,22 @@ class Mandarin {
         );
     }
     
-    drop() {
-        if (!this.isDropping) {
-            this.isDropping = true;
+    // Обновляем метод drop
+    drop(crossroadIndex) {
+        if (!this.isDropping && !this.isMovingToCrossroad) {
+            const crossroad = this.game.conveyor.crossroads[crossroadIndex];
+            
+            // Проверяем, не проехала ли мандаринка перекресток
+            const distancePassed = Math.abs(this.x - crossroad.x);
+            const maxAllowedDistance = this.width / 2 + crossroad.width / 4;
+            
+            if (distancePassed <= maxAllowedDistance) {
+                // Мандаринка достаточно близко к перекрестку
+                this.isMovingToCrossroad = true;
+                this.targetCrossroadX = crossroad.x;
+                this.targetDevilIndex = crossroadIndex;
+            }
+            // Если мандаринка уже проехала перекресток, ничего не делаем
         }
     }
     
@@ -79,25 +129,28 @@ class Mandarin {
     }
     
     reachDevil() {
+        // Получаем черта, к которому направляется мандаринка
+        const devil = this.game.devils[this.targetDevilIndex];
+        
         // Проверка, может ли черт принять мандаринку
-        if (this.game.devil.canEat) {
+        if (devil.canEat) {
             // Проверка, правильная ли мандаринка
-            if (this.type === this.game.devil.desiredType) {
+            if (this.type === devil.desiredType) {
                 // Правильная мандаринка
                 this.createEffect('correct');
-                this.game.devil.eat(this);
+                devil.eat(this);
                 this.game.state.correctMandarins++;
                 this.game.state.score += 10;
             } else {
                 // Неправильная мандаринка
                 this.createEffect('wrong');
-                this.game.devil.reject(this);
+                devil.reject(this);
                 this.game.state.wrongMandarins++;
             }
         } else {
             // Черт занят, отбрасывает мандаринку
             this.createEffect('wrong');
-            this.game.devil.reject(this);
+            devil.reject(this);
             this.game.state.wrongMandarins++;
         }
         

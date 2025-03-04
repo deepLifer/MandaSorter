@@ -1,6 +1,6 @@
 @font-face {
-    font-family: 'PixelFont';
-    src: url('assets/fonts/pixel-font.ttf') format('truetype');
+    font-family: 'Cornerita';
+    src: url('assets/fonts/Cornerita.ttf') format('truetype');
 }
 
 * {
@@ -10,7 +10,7 @@
 }
 
 body {
-    font-family: 'PixelFont', monospace;
+    font-family: 'Cornerita', monospace;
     background-color: #000;
     color: #fff;
     overflow: hidden;
@@ -58,7 +58,7 @@ button {
     border: 3px solid #00ffff;
     padding: 15px 30px;
     margin: 10px;
-    font-family: 'PixelFont', monospace;
+    font-family: 'Cornerita', monospace;
     font-size: 18px;
     cursor: pointer;
     text-transform: uppercase;

@@ -1,10 +1,11 @@
 // Класс черта
 class Devil {
-    constructor(game) {
+    constructor(game, index = 0) {
         this.game = game;
+        this.index = index; // Индекс черта
         
         // Позиция и размеры
-        this.x = this.game.dom.canvas.width / 2;
+        this.x = this.game.dom.canvas.width / 2; // Будет переопределено в Game.startGame
         this.y = this.game.dom.canvas.height * 0.55;
         this.width = 100;
         this.height = 120;
@@ -124,7 +125,7 @@ class Devil {
         // Добавляем отрисовку таймера
         if (this.isWaiting) {
             const waitTimeSeconds = (this.waitTimer / 1000).toFixed(1);
-            ctx.font = '16px PixelFont';
+            ctx.font = '16px Cornerita';
             ctx.fillStyle = waitTimeSeconds > 5 ? '#ff0000' : '#ffffff';
             ctx.textAlign = 'center';
             ctx.fillText(`${waitTimeSeconds}с`, this.x, this.y - 100);
