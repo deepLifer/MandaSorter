@@ -3,12 +3,15 @@ class Game {
     constructor() {
         // Настройки игры
         this.settings = {
-            totalMandarins: 10,
+            totalMandarins: 100,
             mandarinTypes: ['orange', 'green'],
-            mandarinSpeed: 4,
+            mandarinSpeed: 2.8,
             spawnInterval: 2000, // в миллисекундах
             eatingTime: 3000 // в миллисекундах
         };
+        
+        // Добавляем отладочный режим
+        this.debug = false; // Установите в true для отображения отладочной информации
         
         // Состояние игры
         this.state = {
@@ -77,6 +80,31 @@ class Game {
         // Предзагрузка шрифта
         this.loadFont('Cornerita', 'assets/fonts/Cornerita.ttf');
         
+        // Добавляем переменные для отслеживания текущего токена
+        this.currentTokenName = null;
+        this.tokenShaking = false;
+        this.lastTimestamp = null; // Для расчета deltaTime
+        
+        // Список названий мемкоинов
+        this.memecoinNames = [
+            "PEPE", "DOGE", "SHIB", "FLOKI", "WOJAK", 
+            "TURBO", "MEME", "BONK", "WIF", "MOG",
+            "SLERF", "BOME", "BRETT", "TOSHI", "COQ",
+            "MILADY", "TRUMP", "HARAMBE", "MOON", "TENDIES",
+            "CHAD", "CUMMIES", "DOBO", "ELON", "GIGA",
+            "HODL", "LAMBO", "MOON", "PUMP", "REKT",
+            "SAFEMOON", "SATS", "TENDIES", "WAGMI", "WENLAMBO",
+            "WOJAK", "YOLO", "ZYZZ", "APE", "BASED",
+            "BULL", "CHAD", "COPE", "CRAB", "DEFI",
+            "DIAMOND", "FOMO", "FUD", "GWEI", "HODL"
+        ];
+        
+        // Массив для отслеживания использованных названий
+        this.usedMemecoinNames = [];
+        
+        // Массив для объектов мемкоинов
+        this.memecoins = [];
+        
         // Инициализация игры
         this.init();
     }
@@ -105,7 +133,9 @@ class Game {
             { name: 'toilet', src: 'assets/images/toilet.png' },
             { name: 'crossroad', src: 'assets/images/crossroad.png' },
             { name: 'bubble', src: 'assets/images/bubble.png' },
-            { name: 'splash', src: 'assets/images/splash.png' }
+            { name: 'splash', src: 'assets/images/splash.png' },
+            { name: 'poop', src: 'assets/images/poop.png' },
+            { name: 'pumpfun', src: 'assets/images/pumpfun.png' }
         ];
         
         this.resources.toLoad = imagesToLoad.length;
@@ -204,6 +234,7 @@ class Game {
     
     startGame() {
         // Сброс состояния игры
+        this.state.currentScreen = 'game';
         this.state.mandarinsLeft = this.settings.totalMandarins;
         this.state.score = 0;
         this.state.correctMandarins = 0;
@@ -211,35 +242,38 @@ class Game {
         this.state.totalWaitTime = 0;
         this.state.isRunning = true;
         
-        // Обновление отображения
+        // Сброс текущего токена и анимации
+        this.currentTokenName = null;
+        this.tokenShaking = false;
+        this.lastTimestamp = null; // Сброс временной метки для deltaTime
+        
+        // Обновление отображения статистики
         this.updateStatsDisplay();
         
-        // Создание игровых объектов
-        this.conveyor = new Conveyor(this);
-        
-        // Создание двух чертей
+        // Очистка массивов объектов
+        this.mandarins = [];
         this.devils = [];
         
-        // Первый черт (слева)
-        const devil1 = new Devil(this, 0);
-        devil1.x = this.dom.canvas.width * 0.25; // 25% от ширины экрана
-        this.devils.push(devil1);
+        // Создание чертей
+        this.devils.push(new Devil(this, 0));
+        this.devils.push(new Devil(this, 1));
         
-        // Второй черт (справа)
-        const devil2 = new Devil(this, 1);
-        devil2.x = this.dom.canvas.width * 0.75; // 75% от ширины экрана
-        this.devils.push(devil2);
+        // Позиционирование чертей
+        this.devils[0].x = this.dom.canvas.width * 0.25;
+        this.devils[1].x = this.dom.canvas.width * 0.75;
         
-        this.mandarins = [];
-        
-        // Обновляем ответвления конвейера
+        // Создание конвейера
+        this.conveyor = new Conveyor(this);
         this.conveyor.updateBranches();
         
         // Очистка массива эффектов
         this.effects = [];
         
+        // Сброс списка использованных названий мемкоинов
+        this.usedMemecoinNames = [];
+        this.memecoins = [];
+        
         // Запуск игрового цикла
-        this.lastTime = performance.now();
         requestAnimationFrame(this.update);
         
         // Запуск спавна мандаринок с проверкой окончания игры
@@ -254,70 +288,133 @@ class Game {
         
         // Показ игрового экрана
         this.showScreen('game');
+        
+        console.log("Игра запущена!");
     }
     
     spawnMandarin() {
         if (this.state.mandarinsLeft <= 0) return;
         
-        // Случайный тип мандаринки
-        const type = this.settings.mandarinTypes[Math.floor(Math.random() * this.settings.mandarinTypes.length)];
+        // Уменьшаем счетчик оставшихся мандаринок
+        this.state.mandarinsLeft--;
         
-        // Создание мандаринки
+        // Обновляем отображение
+        this.updateStatsDisplay();
+        
+        // Создаем новую мандаринку
+        const type = this.settings.mandarinTypes[Math.floor(Math.random() * this.settings.mandarinTypes.length)];
         const mandarin = new Mandarin(this, type);
+        
+        // Добавляем мандаринку в массив
         this.mandarins.push(mandarin);
         
-        // Уменьшение счетчика оставшихся мандаринок
-        this.state.mandarinsLeft--;
-        this.updateStatsDisplay();
+        console.log("Создана новая мандаринка типа:", type);
     }
     
-    update(currentTime) {
-        // Вычисление deltaTime
-        const deltaTime = currentTime - this.lastTime;
-        this.lastTime = currentTime;
+    update(timestamp) {
+        if (!this.state.isRunning) return;
         
-        // Обновление игровых объектов
+        // Расчет deltaTime
+        if (!this.lastTimestamp) {
+            this.lastTimestamp = timestamp;
+        }
+        const deltaTime = timestamp - this.lastTimestamp;
+        this.lastTimestamp = timestamp;
+        
+        // Обновление конвейера
         this.conveyor.update(deltaTime);
         
-        // Обновление всех чертей
+        // Обновление чертей
         for (const devil of this.devils) {
             devil.update(deltaTime);
             
-            // Обновляем общее время ожидания, если черт ждет
+            // Обновление общего времени ожидания
             if (devil.isWaiting) {
                 this.state.totalWaitTime += deltaTime;
+                this.updateStatsDisplay();
             }
         }
         
         // Обновление мандаринок
-        this.mandarins.forEach(mandarin => mandarin.update(deltaTime));
-        
-        // Удаление мандаринок, вышедших за пределы экрана
         this.mandarins = this.mandarins.filter(mandarin => {
-            if (mandarin.x > this.dom.canvas.width) {
-                return false; // Удаляем мандаринку
+            // Обновляем позицию мандаринки
+            const isActive = mandarin.update(deltaTime);
+            
+            // Проверка на съедание мандаринки
+            if (mandarin.isDropping && !mandarin.isEaten) {
+                const devilIndex = mandarin.targetDevilIndex;
+                const devil = this.devils[devilIndex];
+                
+                // Проверка столкновения с чертом
+                if (
+                    Math.abs(mandarin.x - devil.x) < 50 &&
+                    Math.abs(mandarin.y - devil.y) < 50 &&
+                    devil.canEat
+                ) {
+                    // Проверка типа мандаринки
+                    if (mandarin.type === devil.desiredType) {
+                        // Правильная мандаринка
+                        devil.eat(mandarin);
+                        mandarin.isEaten = true;
+                        this.state.score += 10;
+                        this.state.correctMandarins++;
+                    } else {
+                        // Неправильная мандаринка
+                        devil.reject(mandarin);
+                        this.state.wrongMandarins++;
+                        
+                        // Создаем эффект отбрасывания
+                        const splash = {
+                            x: devil.x,
+                            y: devil.y,
+                            width: 100,
+                            height: 100,
+                            opacity: 1,
+                            fadeSpeed: 0.05,
+                            update: function(dt) {
+                                this.opacity -= this.fadeSpeed;
+                                return this.opacity > 0;
+                            },
+                            draw: (ctx) => {
+                                ctx.globalAlpha = splash.opacity;
+                                ctx.drawImage(
+                                    this.resources.images.splash,
+                                    splash.x - splash.width / 2,
+                                    splash.y - splash.height / 2,
+                                    splash.width,
+                                    splash.height
+                                );
+                                ctx.globalAlpha = 1;
+                            }
+                        };
+                        
+                        this.effects.push(splash);
+                    }
+                    
+                    this.updateStatsDisplay();
+                }
             }
-            return true;
+            
+            return isActive;
         });
         
         // Обновление эффектов
         this.effects = this.effects.filter(effect => effect.update(deltaTime));
         
-        // Проверка окончания игры
-        if (this.state.mandarinsLeft === 0 && this.mandarins.length === 0 && this.state.isRunning) {
-            this.endGame();
-        }
+        // Обновление мемкоинов
+        this.memecoins = this.memecoins.filter(memecoin => memecoin.update(deltaTime));
         
-        // Обновление отображения статистики
-        this.updateStatsDisplay();
+        // Проверка окончания игры
+        if (this.state.mandarinsLeft === 0 && this.mandarins.length === 0) {
+            this.endGame();
+            return;
+        }
         
         // Отрисовка
         this.draw();
         
-        // Продолжение игрового цикла
-        if (this.state.isRunning) {
-            requestAnimationFrame(this.update);
-        }
+        // Запрос следующего кадра
+        requestAnimationFrame(this.update);
     }
     
     draw() {
@@ -350,6 +447,72 @@ class Game {
         
         // Отрисовка эффектов
         this.effects.forEach(effect => effect.draw(this.ctx));
+        
+        // Отрисовка мемкоинов
+        this.memecoins.forEach(memecoin => memecoin.draw(this.ctx));
+        
+        // Отрисовка нижней панели (серый прямоугольник)
+        const panelHeight = this.dom.canvas.height * 0.15;
+        const panelY = this.dom.canvas.height - panelHeight;
+        
+        this.ctx.fillStyle = '#333333'; // Серый цвет
+        this.ctx.fillRect(0, panelY, this.dom.canvas.width, panelHeight);
+        
+        // Отрисовка логотипа
+        if (this.resources.images.pumpfun && this.resources.images.pumpfun.complete) {
+            const logoWidth = panelHeight * 1.5; // Ширина логотипа в 1.5 раза больше высоты
+            const logoHeight = panelHeight * 0.8; // Высота логотипа 80% от высоты панели
+            const logoY = panelY + (panelHeight - logoHeight) / 2; // Центрирование по вертикали
+            
+            this.ctx.drawImage(
+                this.resources.images.pumpfun,
+                20, // Отступ слева
+                logoY,
+                logoWidth,
+                logoHeight
+            );
+        }
+        
+        // Отрисовка текстового блока с названием токена
+        this.ctx.font = '24px Cornerita';
+        this.ctx.fillStyle = '#FFFFFF';
+        this.ctx.textAlign = 'center';
+        this.ctx.textBaseline = 'middle';
+        
+        // Заголовок "King of the hill"
+        this.ctx.fillText(
+            'King of the hill',
+            this.dom.canvas.width / 2,
+            panelY + panelHeight * 0.3
+        );
+        
+        // Название последнего токена
+        console.log("Текущий токен в draw:", this.currentTokenName); // Отладочный вывод
+        
+        if (this.currentTokenName) {
+            // Если токен трясется, применяем смещение
+            let tokenX = this.dom.canvas.width / 2;
+            if (this.tokenShaking) {
+                tokenX += Math.sin(Date.now() / 30) * 5; // Тряска влево-вправо
+            }
+            
+            this.ctx.font = '32px Cornerita';
+            this.ctx.fillStyle = '#FFFFFF';
+            this.ctx.fillText(
+                this.currentTokenName,
+                tokenX,
+                panelY + panelHeight * 0.7
+            );
+        } else {
+            // Если токен еще не установлен, показываем заглушку
+            this.ctx.font = '32px Cornerita';
+            this.ctx.fillStyle = '#888888'; // Серый цвет для заглушки
+            this.ctx.fillText(
+                '$???',
+                this.dom.canvas.width / 2,
+                panelY + panelHeight * 0.7
+            );
+        }
     }
     
     handleClick(event) {
@@ -428,6 +591,55 @@ class Game {
         }).catch(function(error) {
             console.error('Ошибка загрузки шрифта:', error);
         });
+    }
+    
+    // Метод для получения случайного неиспользованного названия мемкоина
+    getRandomMemecoinName() {
+        // Фильтруем только неиспользованные названия
+        const availableNames = this.memecoinNames.filter(name => !this.usedMemecoinNames.includes(name));
+        
+        // Если все названия использованы, сбрасываем список использованных
+        if (availableNames.length === 0) {
+            this.usedMemecoinNames = [];
+            return this.memecoinNames[Math.floor(Math.random() * this.memecoinNames.length)];
+        }
+        
+        // Выбираем случайное название из доступных
+        const randomName = availableNames[Math.floor(Math.random() * availableNames.length)];
+        
+        // Добавляем в список использованных
+        this.usedMemecoinNames.push(randomName);
+        
+        return randomName;
+    }
+    
+    // Метод для создания нового объекта мемкоина
+    createMemecoin(x, y) {
+        const name = this.getRandomMemecoinName();
+        console.log("Создаем мемкоин с названием:", name);
+        const memecoin = new Memecoin(this, x, y, name);
+        this.memecoins.push(memecoin);
+    }
+    
+    // Метод для установки текущего токена и запуска анимации тряски
+    setCurrentToken(tokenName) {
+        console.log("Устанавливаем текущий токен:", tokenName); // Отладочный вывод
+        
+        if (!tokenName) {
+            console.error("Попытка установить пустое имя токена");
+            return;
+        }
+        
+        // Добавляем символ $ перед названием (если его еще нет)
+        this.currentTokenName = tokenName.startsWith('$') ? tokenName : `$${tokenName}`;
+        
+        // Запускаем анимацию тряски
+        this.tokenShaking = true;
+        
+        // Останавливаем тряску через 500 мс
+        setTimeout(() => {
+            this.tokenShaking = false;
+        }, 500);
     }
 }
 

@@ -59,7 +59,7 @@ class Conveyor {
         
         // Анимация конвейера
         this.offset = 0;
-        this.speed = 2;
+        this.speed = 1.4; // Уменьшено на 30% с 2
         
         // Добавим обработчик движения мыши
         this.game.dom.canvas.addEventListener('mousemove', (event) => {

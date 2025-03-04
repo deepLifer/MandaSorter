@@ -10,69 +10,111 @@ class Mandarin {
         this.width = 40;
         this.height = 40;
         
+        // Скорость движения
+        this.speed = this.game.settings.mandarinSpeed;
+        
         // Состояние
         this.isDropping = false;
-        this.dropSpeed = 5;
+        this.isEaten = false; // Флаг, указывающий, что мандаринка съедена
         this.targetDevilIndex = undefined; // Индекс черта, к которому направляется мандаринка
         
         // Добавляем новые состояния
         this.isMovingToCrossroad = false;
-        this.targetCrossroadX = 0;
+        this.targetX = 0; // Целевая позиция X при движении к перекрестку
         
         // Изображение
         this.image = this.type === 'orange' 
             ? this.game.resources.images.orangeMandarin 
             : this.game.resources.images.greenMandarin;
+        
+        console.log(`Создана мандаринка типа ${this.type} на позиции (${this.x}, ${this.y})`);
     }
     
     update(deltaTime) {
+        // Если мандаринка движется к перекрестку
         if (this.isMovingToCrossroad) {
-            // Если мандаринка движется к центру перекрестка
-            const moveSpeed = this.game.settings.mandarinSpeed;
+            // Вычисляем направление движения
+            const dx = this.targetX - this.x;
+            const distance = Math.abs(dx);
             
-            // Определяем направление движения
-            if (this.x < this.targetCrossroadX) {
-                this.x += moveSpeed;
-                if (this.x >= this.targetCrossroadX) {
-                    this.x = this.targetCrossroadX;
-                    this.isMovingToCrossroad = false;
-                    this.isDropping = true;
-                }
-            } else if (this.x > this.targetCrossroadX) {
-                this.x -= moveSpeed;
-                if (this.x <= this.targetCrossroadX) {
-                    this.x = this.targetCrossroadX;
-                    this.isMovingToCrossroad = false;
-                    this.isDropping = true;
-                }
-            } else {
-                // Если мандаринка уже в центре перекрестка
+            // Если мандаринка достигла перекрестка
+            if (distance < 5) {
+                this.x = this.targetX;
                 this.isMovingToCrossroad = false;
                 this.isDropping = true;
+                console.log(`Мандаринка достигла перекрестка и начинает падение`);
+            } else {
+                // Движение к перекрестку
+                this.x += Math.sign(dx) * this.speed;
             }
-        } else if (this.isDropping) {
-            // Если мандаринка падает
-            this.y += this.dropSpeed;
-            
-            // Если targetDevilIndex не определен, определяем ближайшего черта
-            if (this.targetDevilIndex === undefined) {
-                this.targetDevilIndex = this.game.conveyor.getClosestCrossroadIndex(this.x);
-            }
-            
-            // Получаем черта, к которому направляется мандаринка
-            const devil = this.game.devils[this.targetDevilIndex];
-            
-            // Проверка на достижение черта
-            if (this.y >= devil.y) {
-                this.reachDevil();
-            }
-        } else {
-            // Движение по конвейеру
-            this.x += this.game.settings.mandarinSpeed;
         }
+        // Если мандаринка падает
+        else if (this.isDropping) {
+            // Движение вниз
+            this.y += this.speed;
+            
+            // Проверка столкновения с чертом
+            if (this.targetDevilIndex !== undefined) {
+                const devil = this.game.devils[this.targetDevilIndex];
+                
+                // Проверяем, достигла ли мандаринка черта
+                if (Math.abs(this.x - devil.x) < 50 && Math.abs(this.y - devil.y) < 50 && !this.isEaten) {
+                    console.log(`Мандаринка достигла черта ${this.targetDevilIndex}`);
+                    
+                    // Проверка, может ли черт принять мандаринку
+                    if (devil.canEat) {
+                        // Проверка, правильная ли мандаринка
+                        if (this.type === devil.desiredType) {
+                            // Правильная мандаринка
+                            devil.eat(this);
+                            this.isEaten = true;
+                            this.game.state.correctMandarins++;
+                            this.game.state.score += 10;
+                        } else {
+                            // Неправильная мандаринка
+                            devil.reject(this);
+                            this.game.state.wrongMandarins++;
+                        }
+                        
+                        // Обновление отображения
+                        this.game.updateStatsDisplay();
+                        return false; // Удаляем мандаринку
+                    }
+                }
+            }
+            
+            // Проверка выхода за пределы экрана
+            if (this.y > this.game.dom.canvas.height) {
+                console.log(`Мандаринка вышла за пределы экрана и будет удалена`);
+                return false; // Удаляем мандаринку
+            }
+        }
+        // Обычное движение по конвейеру
+        else {
+            // Движение вправо
+            this.x += this.speed;
+            
+            // Проверка выхода за пределы экрана
+            if (this.x > this.game.dom.canvas.width) {
+                console.log(`Мандаринка вышла за правый край экрана и будет удалена`);
+                return false; // Удаляем мандаринку
+            }
+        }
+        
+        return true; // Мандаринка остается активной
     }
     
     draw(ctx) {
+        if (!this.image || !this.image.complete) {
+            // Если изображение не загружено, рисуем заглушку
+            ctx.fillStyle = this.type === 'orange' ? '#FFA500' : '#00FF00';
+            ctx.beginPath();
+            ctx.arc(this.x, this.y, this.width / 2, 0, Math.PI * 2);
+            ctx.fill();
+            return;
+        }
+        
+        // Отрисовка изображения
         ctx.drawImage(
             this.image,
             this.x - this.width / 2,
@@ -80,6 +122,14 @@ class Mandarin {
             this.width,
             this.height
         );
+        
+        // Отладочная информация
+        if (this.game.debug) {
+            ctx.fillStyle = 'white';
+            ctx.font = '10px Arial';
+            ctx.fillText(`x: ${Math.round(this.x)}, y: ${Math.round(this.y)}`, this.x, this.y - 20);
+            ctx.fillText(`type: ${this.type}`, this.x, this.y - 10);
+        }
     }
     
     // Обновляем метод drop
@@ -94,8 +144,10 @@ class Mandarin {
             if (distancePassed <= maxAllowedDistance) {
                 // Мандаринка достаточно близко к перекрестку
                 this.isMovingToCrossroad = true;
-                this.targetCrossroadX = crossroad.x;
+                this.targetX = crossroad.x; // Используем targetX вместо targetCrossroadX
                 this.targetDevilIndex = crossroadIndex;
+                
+                console.log(`Мандаринка начинает движение к перекрестку ${crossroadIndex} на позиции ${crossroad.x}`);
             }
             // Если мандаринка уже проехала перекресток, ничего не делаем
         }

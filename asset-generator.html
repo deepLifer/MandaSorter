@@ -1,222 +1,599 @@
 <!DOCTYPE html>
-<html>
+<html lang="ru">
 <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Генератор ассетов для игры</title>
     <style>
-        body { font-family: Arial, sans-serif; background: #222; color: #fff; }
-        .asset { margin: 20px; display: inline-block; text-align: center; }
-        canvas { border: 1px solid #444; background: #000; }
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        canvas {
+            border: 1px solid #ccc;
+            margin: 10px 0;
+        }
+        .asset-container {
+            margin-bottom: 30px;
+        }
+        button {
+            padding: 10px 15px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover {
+            background-color: #45a049;
+        }
     </style>
 </head>
 <body>
     <h1>Генератор ассетов для игры "Мандариновый Конвейер"</h1>
-    <div id="assets-container"></div>
-
+    
+    <div class="asset-container">
+        <h2>Конвейер</h2>
+        <canvas id="conveyor-canvas" width="100" height="30"></canvas>
+        <div>
+            <button onclick="generateConveyor()">Сгенерировать</button>
+            <button onclick="downloadAsset('conveyor-canvas', 'conveyor.png')">Скачать</button>
+        </div>
+    </div>
+    
+    <div class="asset-container">
+        <h2>Перекресток</h2>
+        <canvas id="crossroad-canvas" width="50" height="50"></canvas>
+        <div>
+            <button onclick="generateCrossroad()">Сгенерировать</button>
+            <button onclick="downloadAsset('crossroad-canvas', 'crossroad.png')">Скачать</button>
+        </div>
+    </div>
+    
+    <div class="asset-container">
+        <h2>Оранжевая мандаринка</h2>
+        <canvas id="orange-mandarin-canvas" width="40" height="40"></canvas>
+        <div>
+            <button onclick="generateOrangeMandarin()">Сгенерировать</button>
+            <button onclick="downloadAsset('orange-mandarin-canvas', 'orange-mandarin.png')">Скачать</button>
+        </div>
+    </div>
+    
+    <div class="asset-container">
+        <h2>Зеленая мандаринка</h2>
+        <canvas id="green-mandarin-canvas" width="40" height="40"></canvas>
+        <div>
+            <button onclick="generateGreenMandarin()">Сгенерировать</button>
+            <button onclick="downloadAsset('green-mandarin-canvas', 'green-mandarin.png')">Скачать</button>
+        </div>
+    </div>
+    
+    <div class="asset-container">
+        <h2>Черт</h2>
+        <canvas id="devil-canvas" width="100" height="120"></canvas>
+        <div>
+            <button onclick="generateDevil()">Сгенерировать</button>
+            <button onclick="downloadAsset('devil-canvas', 'devil.png')">Скачать</button>
+        </div>
+    </div>
+    
+    <div class="asset-container">
+        <h2>Унитаз</h2>
+        <canvas id="toilet-canvas" width="120" height="80"></canvas>
+        <div>
+            <button onclick="generateToilet()">Сгенерировать</button>
+            <button onclick="downloadAsset('toilet-canvas', 'toilet.png')">Скачать</button>
+        </div>
+    </div>
+    
+    <div class="asset-container">
+        <h2>Пузырь</h2>
+        <canvas id="bubble-canvas" width="60" height="60"></canvas>
+        <div>
+            <button onclick="generateBubble()">Сгенерировать</button>
+            <button onclick="downloadAsset('bubble-canvas', 'bubble.png')">Скачать</button>
+        </div>
+    </div>
+    
+    <div class="asset-container">
+        <h2>Всплеск</h2>
+        <canvas id="splash-canvas" width="60" height="60"></canvas>
+        <div>
+            <button onclick="generateSplash()">Сгенерировать</button>
+            <button onclick="downloadAsset('splash-canvas', 'splash.png')">Скачать</button>
+        </div>
+    </div>
+    
+    <div class="asset-container">
+        <h2>Куча (Мемкоин)</h2>
+        <canvas id="poop-canvas" width="40" height="40"></canvas>
+        <div>
+            <button onclick="generatePoop()">Сгенерировать</button>
+            <button onclick="downloadAsset('poop-canvas', 'poop.png')">Скачать</button>
+        </div>
+    </div>
+    
+    <div class="asset-container">
+        <h2>Фон</h2>
+        <canvas id="background-canvas" width="800" height="600"></canvas>
+        <div>
+            <button onclick="generateBackground()">Сгенерировать</button>
+            <button onclick="downloadAsset('background-canvas', 'background.png')">Скачать</button>
+        </div>
+    </div>
+    
     <script>
-        // Конфигурация ассетов
-        const assets = [
-            { name: 'background', width: 640, height: 960 },
-            { name: 'conveyor', width: 100, height: 30 },
-            { name: 'orange-mandarin', width: 40, height: 40 },
-            { name: 'green-mandarin', width: 40, height: 40 },
-            { name: 'devil', width: 100, height: 120 },
-            { name: 'toilet', width: 120, height: 80 },
-            { name: 'crossroad', width: 50, height: 50 },
-            { name: 'bubble', width: 60, height: 60 }
-        ];
-
-        const container = document.getElementById('assets-container');
-
-        // Создание канвасов для каждого ассета
-        assets.forEach(asset => {
-            const div = document.createElement('div');
-            div.className = 'asset';
-            
-            const canvas = document.createElement('canvas');
-            canvas.width = asset.width;
-            canvas.height = asset.height;
-            canvas.id = asset.name;
-            
+        // Функция для скачивания ассета
+        function downloadAsset(canvasId, filename) {
+            const canvas = document.getElementById(canvasId);
+            const link = document.createElement('a');
+            link.download = filename;
+            link.href = canvas.toDataURL('image/png');
+            link.click();
+        }
+        
+        // Генерация конвейера
+        function generateConveyor() {
+            const canvas = document.getElementById('conveyor-canvas');
             const ctx = canvas.getContext('2d');
             
-            // Рисуем заглушку в зависимости от типа ассета
-            drawPlaceholder(ctx, asset);
+            // Очистка канваса
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
             
-            const link = document.createElement('a');
-            link.href = canvas.toDataURL('image/png');
-            link.download = asset.name + '.png';
-            link.textContent = 'Скачать ' + asset.name + '.png';
+            // Фон конвейера
+            ctx.fillStyle = '#555';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
             
-            div.appendChild(canvas);
-            div.appendChild(document.createElement('br'));
-            div.appendChild(link);
+            // Полосы на конвейере
+            ctx.fillStyle = '#333';
+            for (let i = 0; i < canvas.width; i += 10) {
+                ctx.fillRect(i, 0, 5, canvas.height);
+            }
             
-            container.appendChild(div);
-        });
-
-        // Функция для рисования заглушек
-        function drawPlaceholder(ctx, asset) {
-            switch(asset.name) {
-                case 'background':
-                    // Темный фон с неоновой сеткой
-                    ctx.fillStyle = '#120024';
-                    ctx.fillRect(0, 0, asset.width, asset.height);
-                    
-                    // Неоновые линии
-                    ctx.strokeStyle = '#ff00ff';
-                    ctx.lineWidth = 2;
-                    for(let i = 0; i < asset.width; i += 40) {
-                        ctx.beginPath();
-                        ctx.moveTo(i, 0);
-                        ctx.lineTo(i, asset.height);
-                        ctx.stroke();
-                    }
-                    
-                    ctx.strokeStyle = '#00ffff';
-                    for(let i = 0; i < asset.height; i += 40) {
-                        ctx.beginPath();
-                        ctx.moveTo(0, i);
-                        ctx.lineTo(asset.width, i);
-                        ctx.stroke();
-                    }
-                    break;
-                    
-                case 'conveyor':
-                    // Серая лента с темными линиями
-                    ctx.fillStyle = '#555';
-                    ctx.fillRect(0, 0, asset.width, asset.height);
-                    
-                    ctx.fillStyle = '#333';
-                    for(let i = 0; i < asset.width; i += 10) {
-                        ctx.fillRect(i, 0, 5, asset.height);
-                    }
-                    break;
-                    
-                case 'orange-mandarin':
-                    // Оранжевый круг с текстурой
-                    ctx.fillStyle = '#ff8800';
-                    ctx.beginPath();
-                    ctx.arc(asset.width/2, asset.height/2, asset.width/2 - 2, 0, Math.PI*2);
-                    ctx.fill();
-                    
-                    // Текстура
-                    ctx.fillStyle = '#ee7700';
-                    ctx.beginPath();
-                    ctx.arc(asset.width/2 - 5, asset.height/2 - 5, asset.width/4, 0, Math.PI*2);
-                    ctx.fill();
-                    
-                    // Листик
-                    ctx.fillStyle = '#00aa00';
-                    ctx.fillRect(asset.width/2 - 2, 2, 4, 6);
-                    break;
-                    
-                case 'green-mandarin':
-                    // Зеленый круг с текстурой
-                    ctx.fillStyle = '#00cc00';
-                    ctx.beginPath();
-                    ctx.arc(asset.width/2, asset.height/2, asset.width/2 - 2, 0, Math.PI*2);
-                    ctx.fill();
-                    
-                    // Текстура
-                    ctx.fillStyle = '#00aa00';
-                    ctx.beginPath();
-                    ctx.arc(asset.width/2 - 5, asset.height/2 - 5, asset.width/4, 0, Math.PI*2);
-                    ctx.fill();
-                    
-                    // Листик
-                    ctx.fillStyle = '#008800';
-                    ctx.fillRect(asset.width/2 - 2, 2, 4, 6);
-                    break;
-                    
-                case 'devil':
-                    // Красное тело
-                    ctx.fillStyle = '#cc0000';
-                    ctx.fillRect(20, 30, 60, 70);
-                    
-                    // Голова
-                    ctx.fillStyle = '#cc0000';
-                    ctx.beginPath();
-                    ctx.arc(asset.width/2, 30, 20, 0, Math.PI*2);
-                    ctx.fill();
-                    
-                    // Рога
-                    ctx.fillStyle = '#880000';
-                    ctx.beginPath();
-                    ctx.moveTo(30, 20);
-                    ctx.lineTo(40, 5);
-                    ctx.lineTo(50, 20);
-                    ctx.fill();
-                    
-                    ctx.beginPath();
-                    ctx.moveTo(50, 20);
-                    ctx.lineTo(60, 5);
-                    ctx.lineTo(70, 20);
-                    ctx.fill();
-                    
-                    // Глаза
-                    ctx.fillStyle = '#ffffff';
-                    ctx.fillRect(35, 25, 10, 10);
-                    ctx.fillRect(55, 25, 10, 10);
-                    
-                    ctx.fillStyle = '#000000';
-                    ctx.fillRect(38, 28, 4, 4);
-                    ctx.fillRect(58, 28, 4, 4);
-                    
-                    // Рот
-                    ctx.fillStyle = '#000000';
-                    ctx.fillRect(40, 45, 20, 5);
-                    break;
-                    
-                case 'toilet':
-                    // Унитаз
-                    ctx.fillStyle = '#ffffff';
-                    ctx.fillRect(20, 20, 80, 60);
-                    
-                    // Бачок
-                    ctx.fillStyle = '#aaddff';
-                    ctx.fillRect(30, 0, 60, 20);
-                    
-                    // Отверстие
-                    ctx.fillStyle = '#000000';
-                    ctx.beginPath();
-                    ctx.ellipse(60, 50, 20, 10, 0, 0, Math.PI*2);
-                    ctx.fill();
-                    break;
-                    
-                case 'crossroad':
-                    // Т-образный перекресток
-                    ctx.fillStyle = '#ffaa00';
-                    ctx.fillRect(0, 15, 50, 20);
-                    ctx.fillRect(15, 35, 20, 15);
-                    
-                    // Стрелка вниз
-                    ctx.fillStyle = '#ffffff';
-                    ctx.beginPath();
-                    ctx.moveTo(25, 35);
-                    ctx.lineTo(35, 35);
-                    ctx.lineTo(30, 45);
-                    ctx.closePath();
-                    ctx.fill();
-                    break;
-                    
-                case 'bubble':
-                    // Пузырь мысли
-                    ctx.fillStyle = '#ffffff';
-                    ctx.beginPath();
-                    ctx.arc(30, 30, 25, 0, Math.PI*2);
-                    ctx.fill();
-                    
-                    // Маленькие кружочки
-                    ctx.beginPath();
-                    ctx.arc(15, 50, 5, 0, Math.PI*2);
-                    ctx.fill();
-                    
-                    ctx.beginPath();
-                    ctx.arc(5, 55, 3, 0, Math.PI*2);
-                    ctx.fill();
-                    break;
+            // Края конвейера
+            ctx.fillStyle = '#777';
+            ctx.fillRect(0, 0, canvas.width, 3);
+            ctx.fillRect(0, canvas.height - 3, canvas.width, 3);
+        }
+        
+        // Генерация перекрестка
+        function generateCrossroad() {
+            const canvas = document.getElementById('crossroad-canvas');
+            const ctx = canvas.getContext('2d');
+            
+            // Очистка канваса
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            // Круг перекрестка
+            ctx.fillStyle = '#777';
+            ctx.beginPath();
+            ctx.arc(canvas.width / 2, canvas.height / 2, canvas.width / 2 - 2, 0, Math.PI * 2);
+            ctx.fill();
+            
+            // Внутренний круг
+            ctx.fillStyle = '#555';
+            ctx.beginPath();
+            ctx.arc(canvas.width / 2, canvas.height / 2, canvas.width / 3, 0, Math.PI * 2);
+            ctx.fill();
+            
+            // Стрелка вниз
+            ctx.fillStyle = '#DDD';
+            ctx.beginPath();
+            ctx.moveTo(canvas.width / 2, canvas.height / 2 + 5);
+            ctx.lineTo(canvas.width / 2 - 8, canvas.height / 2 - 5);
+            ctx.lineTo(canvas.width / 2 + 8, canvas.height / 2 - 5);
+            ctx.closePath();
+            ctx.fill();
+        }
+        
+        // Генерация оранжевой мандаринки
+        function generateOrangeMandarin() {
+            const canvas = document.getElementById('orange-mandarin-canvas');
+            const ctx = canvas.getContext('2d');
+            
+            // Очистка канваса
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            // Основной круг мандаринки
+            ctx.fillStyle = '#FF8C00';
+            ctx.beginPath();
+            ctx.arc(canvas.width / 2, canvas.height / 2, canvas.width / 2 - 2, 0, Math.PI * 2);
+            ctx.fill();
+            
+            // Текстура мандаринки
+            ctx.fillStyle = '#FF6600';
+            for (let i = 0; i < 8; i++) {
+                const angle = (i / 8) * Math.PI * 2;
+                const x = canvas.width / 2 + Math.cos(angle) * (canvas.width / 4);
+                const y = canvas.height / 2 + Math.sin(angle) * (canvas.height / 4);
+                
+                ctx.beginPath();
+                ctx.arc(x, y, 3, 0, Math.PI * 2);
+                ctx.fill();
+            }
+            
+            // Блик
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.5)';
+            ctx.beginPath();
+            ctx.arc(canvas.width / 3, canvas.height / 3, 5, 0, Math.PI * 2);
+            ctx.fill();
+            
+            // Листик
+            ctx.fillStyle = '#228B22';
+            ctx.beginPath();
+            ctx.ellipse(canvas.width / 2, canvas.height / 4, 5, 3, 0, 0, Math.PI * 2);
+            ctx.fill();
+        }
+        
+        // Генерация зеленой мандаринки
+        function generateGreenMandarin() {
+            const canvas = document.getElementById('green-mandarin-canvas');
+            const ctx = canvas.getContext('2d');
+            
+            // Очистка канваса
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            // Основной круг мандаринки
+            ctx.fillStyle = '#32CD32';
+            ctx.beginPath();
+            ctx.arc(canvas.width / 2, canvas.height / 2, canvas.width / 2 - 2, 0, Math.PI * 2);
+            ctx.fill();
+            
+            // Текстура мандаринки
+            ctx.fillStyle = '#228B22';
+            for (let i = 0; i < 8; i++) {
+                const angle = (i / 8) * Math.PI * 2;
+                const x = canvas.width / 2 + Math.cos(angle) * (canvas.width / 4);
+                const y = canvas.height / 2 + Math.sin(angle) * (canvas.height / 4);
+                
+                ctx.beginPath();
+                ctx.arc(x, y, 3, 0, Math.PI * 2);
+                ctx.fill();
+            }
+            
+            // Блик
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.5)';
+            ctx.beginPath();
+            ctx.arc(canvas.width / 3, canvas.height / 3, 5, 0, Math.PI * 2);
+            ctx.fill();
+            
+            // Листик
+            ctx.fillStyle = '#006400';
+            ctx.beginPath();
+            ctx.ellipse(canvas.width / 2, canvas.height / 4, 5, 3, 0, 0, Math.PI * 2);
+            ctx.fill();
+        }
+        
+        // Генерация черта
+        function generateDevil() {
+            const canvas = document.getElementById('devil-canvas');
+            const ctx = canvas.getContext('2d');
+            
+            // Очистка канваса
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            // Тело черта
+            ctx.fillStyle = '#FF0000';
+            ctx.beginPath();
+            ctx.ellipse(canvas.width / 2, canvas.height / 2 + 20, 30, 40, 0, 0, Math.PI * 2);
+            ctx.fill();
+            
+            // Голова
+            ctx.fillStyle = '#FF3333';
+            ctx.beginPath();
+            ctx.arc(canvas.width / 2, canvas.height / 3, 25, 0, Math.PI * 2);
+            ctx.fill();
+            
+            // Глаза
+            ctx.fillStyle = 'white';
+            ctx.beginPath();
+            ctx.arc(canvas.width / 2 - 10, canvas.height / 3 - 5, 5, 0, Math.PI * 2);
+            ctx.arc(canvas.width / 2 + 10, canvas.height / 3 - 5, 5, 0, Math.PI * 2);
+            ctx.fill();
+            
+            // Зрачки
+            ctx.fillStyle = 'black';
+            ctx.beginPath();
+            ctx.arc(canvas.width / 2 - 10, canvas.height / 3 - 5, 2, 0, Math.PI * 2);
+            ctx.arc(canvas.width / 2 + 10, canvas.height / 3 - 5, 2, 0, Math.PI * 2);
+            ctx.fill();
+            
+            // Рот
+            ctx.beginPath();
+            ctx.arc(canvas.width / 2, canvas.height / 3 + 10, 10, 0, Math.PI);
+            ctx.stroke();
+            
+            // Рога
+            ctx.fillStyle = '#8B0000';
+            ctx.beginPath();
+            ctx.moveTo(canvas.width / 2 - 15, canvas.height / 3 - 15);
+            ctx.lineTo(canvas.width / 2 - 25, canvas.height / 3 - 30);
+            ctx.lineTo(canvas.width / 2 - 5, canvas.height / 3 - 20);
+            ctx.closePath();
+            ctx.fill();
+            
+            ctx.beginPath();
+            ctx.moveTo(canvas.width / 2 + 15, canvas.height / 3 - 15);
+            ctx.lineTo(canvas.width / 2 + 25, canvas.height / 3 - 30);
+            ctx.lineTo(canvas.width / 2 + 5, canvas.height / 3 - 20);
+            ctx.closePath();
+            ctx.fill();
+            
+            // Хвост
+            ctx.strokeStyle = '#8B0000';
+            ctx.lineWidth = 3;
+            ctx.beginPath();
+            ctx.moveTo(canvas.width / 2 - 20, canvas.height - 20);
+            ctx.quadraticCurveTo(canvas.width / 2 - 40, canvas.height - 40, canvas.width / 2 - 10, canvas.height - 60);
+            ctx.stroke();
+            
+            // Кончик хвоста
+            ctx.fillStyle = '#8B0000';
+            ctx.beginPath();
+            ctx.moveTo(canvas.width / 2 - 10, canvas.height - 60);
+            ctx.lineTo(canvas.width / 2 - 20, canvas.height - 70);
+            ctx.lineTo(canvas.width / 2, canvas.height - 65);
+            ctx.closePath();
+            ctx.fill();
+        }
+        
+        // Генерация унитаза
+        function generateToilet() {
+            const canvas = document.getElementById('toilet-canvas');
+            const ctx = canvas.getContext('2d');
+            
+            // Очистка канваса
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            // Основание унитаза
+            ctx.fillStyle = '#FFFFFF';
+            ctx.beginPath();
+            ctx.ellipse(canvas.width / 2, canvas.height - 20, 40, 20, 0, 0, Math.PI * 2);
+            ctx.fill();
+            
+            // Чаша унитаза
+            ctx.beginPath();
+            ctx.ellipse(canvas.width / 2, canvas.height - 30, 30, 15, 0, 0, Math.PI);
+            ctx.fill();
+            
+            // Внутренняя часть чаши
+            ctx.fillStyle = '#87CEEB';
+            ctx.beginPath();
+            ctx.ellipse(canvas.width / 2, canvas.height - 30, 25, 12, 0, 0, Math.PI);
+            ctx.fill();
+            
+            // Сиденье
+            ctx.fillStyle = '#F5F5F5';
+            ctx.beginPath();
+            ctx.ellipse(canvas.width / 2, canvas.height - 30, 35, 18, 0, Math.PI, 0);
+            ctx.fill();
+            
+            // Бачок
+            ctx.fillStyle = '#FFFFFF';
+            ctx.fillRect(canvas.width / 2 - 25, 10, 50, 40);
+            
+            // Кнопка слива
+            ctx.fillStyle = '#DDDDDD';
+            ctx.beginPath();
+            ctx.arc(canvas.width / 2, 20, 5, 0, Math.PI * 2);
+            ctx.fill();
+        }
+        
+        // Генерация пузыря
+        function generateBubble() {
+            const canvas = document.getElementById('bubble-canvas');
+            const ctx = canvas.getContext('2d');
+            
+            // Очистка канваса
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            // Пузырь
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.7)';
+            ctx.beginPath();
+            ctx.arc(canvas.width / 2, canvas.height / 2, canvas.width / 2 - 5, 0, Math.PI * 2);
+            ctx.fill();
+            
+            // Обводка пузыря
+            ctx.strokeStyle = 'rgba(200, 200, 200, 0.8)';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.arc(canvas.width / 2, canvas.height / 2, canvas.width / 2 - 5, 0, Math.PI * 2);
+            ctx.stroke();
+            
+            // Блик
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.9)';
+            ctx.beginPath();
+            ctx.arc(canvas.width / 3, canvas.height / 3, 5, 0, Math.PI * 2);
+            ctx.fill();
+            
+            // Хвостик пузыря
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.7)';
+            ctx.beginPath();
+            ctx.moveTo(canvas.width / 2 - 10, canvas.height - 5);
+            ctx.lineTo(canvas.width / 2, canvas.height - 15);
+            ctx.lineTo(canvas.width / 2 + 10, canvas.height - 5);
+            ctx.closePath();
+            ctx.fill();
+            
+            // Обводка хвостика
+            ctx.strokeStyle = 'rgba(200, 200, 200, 0.8)';
+            ctx.beginPath();
+            ctx.moveTo(canvas.width / 2 - 10, canvas.height - 5);
+            ctx.lineTo(canvas.width / 2, canvas.height - 15);
+            ctx.lineTo(canvas.width / 2 + 10, canvas.height - 5);
+            ctx.stroke();
+        }
+        
+        // Генерация всплеска
+        function generateSplash() {
+            const canvas = document.getElementById('splash-canvas');
+            const ctx = canvas.getContext('2d');
+            
+            // Очистка канваса
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            // Центральный круг
+            ctx.fillStyle = '#87CEEB';
+            ctx.beginPath();
+            ctx.arc(canvas.width / 2, canvas.height / 2, 10, 0, Math.PI * 2);
+            ctx.fill();
+            
+            // Капли
+            const dropCount = 8;
+            for (let i = 0; i < dropCount; i++) {
+                const angle = (i / dropCount) * Math.PI * 2;
+                const distance = 15 + Math.random() * 10;
+                const x = canvas.width / 2 + Math.cos(angle) * distance;
+                const y = canvas.height / 2 + Math.sin(angle) * distance;
+                const size = 3 + Math.random() * 5;
+                
+                ctx.beginPath();
+                ctx.arc(x, y, size, 0, Math.PI * 2);
+                ctx.fill();
+            }
+            
+            // Линии брызг
+            ctx.strokeStyle = '#87CEEB';
+            ctx.lineWidth = 2;
+            for (let i = 0; i < dropCount; i++) {
+                const angle = (i / dropCount) * Math.PI * 2 + Math.random() * 0.3;
+                const innerDistance = 8;
+                const outerDistance = 25 + Math.random() * 10;
+                
+                const x1 = canvas.width / 2 + Math.cos(angle) * innerDistance;
+                const y1 = canvas.height / 2 + Math.sin(angle) * innerDistance;
+                const x2 = canvas.width / 2 + Math.cos(angle) * outerDistance;
+                const y2 = canvas.height / 2 + Math.sin(angle) * outerDistance;
+                
+                ctx.beginPath();
+                ctx.moveTo(x1, y1);
+                ctx.lineTo(x2, y2);
+                ctx.stroke();
             }
         }
+        
+        // Генерация кучи (мемкоина)
+        function generatePoop() {
+            const canvas = document.getElementById('poop-canvas');
+            const ctx = canvas.getContext('2d');
+            
+            // Очистка канваса
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            // Основной цвет кучи
+            const baseColor = '#8B4513';
+            
+            // Нижняя часть кучи
+            ctx.fillStyle = baseColor;
+            ctx.beginPath();
+            ctx.ellipse(canvas.width / 2, canvas.height - 10, 15, 8, 0, 0, Math.PI * 2);
+            ctx.fill();
+            
+            // Средняя часть кучи
+            ctx.fillStyle = shadeColor(baseColor, 10);
+            ctx.beginPath();
+            ctx.ellipse(canvas.width / 2, canvas.height - 18, 12, 7, 0, 0, Math.PI * 2);
+            ctx.fill();
+            
+            // Верхняя часть кучи
+            ctx.fillStyle = shadeColor(baseColor, 20);
+            ctx.beginPath();
+            ctx.ellipse(canvas.width / 2, canvas.height - 25, 8, 6, 0, 0, Math.PI * 2);
+            ctx.fill();
+            
+            // Завиток на вершине
+            ctx.fillStyle = shadeColor(baseColor, 30);
+            ctx.beginPath();
+            ctx.arc(canvas.width / 2, canvas.height - 30, 4, 0, Math.PI * 2);
+            ctx.fill();
+            
+            // Блики для объема
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.2)';
+            ctx.beginPath();
+            ctx.ellipse(canvas.width / 2 - 5, canvas.height - 15, 3, 2, Math.PI / 4, 0, Math.PI * 2);
+            ctx.fill();
+            
+            ctx.beginPath();
+            ctx.ellipse(canvas.width / 2 - 3, canvas.height - 25, 2, 1, Math.PI / 4, 0, Math.PI * 2);
+            ctx.fill();
+            
+            // Функция для затемнения/осветления цвета
+            function shadeColor(color, percent) {
+                let R = parseInt(color.substring(1, 3), 16);
+                let G = parseInt(color.substring(3, 5), 16);
+                let B = parseInt(color.substring(5, 7), 16);
+                
+                R = parseInt(R * (100 + percent) / 100);
+                G = parseInt(G * (100 + percent) / 100);
+                B = parseInt(B * (100 + percent) / 100);
+                
+                R = (R < 255) ? R : 255;
+                G = (G < 255) ? G : 255;
+                B = (B < 255) ? B : 255;
+                
+                const RR = ((R.toString(16).length == 1) ? "0" + R.toString(16) : R.toString(16));
+                const GG = ((G.toString(16).length == 1) ? "0" + G.toString(16) : G.toString(16));
+                const BB = ((B.toString(16).length == 1) ? "0" + B.toString(16) : B.toString(16));
+                
+                return "#" + RR + GG + BB;
+            }
+        }
+        
+        // Генерация фона
+        function generateBackground() {
+            const canvas = document.getElementById('background-canvas');
+            const ctx = canvas.getContext('2d');
+            
+            // Очистка канваса
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            // Градиентный фон
+            const gradient = ctx.createLinearGradient(0, 0, 0, canvas.height);
+            gradient.addColorStop(0, '#000000');
+            gradient.addColorStop(1, '#333333');
+            ctx.fillStyle = gradient;
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            
+            // Добавление "звезд" (точек)
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.5)';
+            for (let i = 0; i < 100; i++) {
+                const x = Math.random() * canvas.width;
+                const y = Math.random() * canvas.height;
+                const size = Math.random() * 2;
+                
+                ctx.beginPath();
+                ctx.arc(x, y, size, 0, Math.PI * 2);
+                ctx.fill();
+            }
+            
+            // Добавление "облаков" (размытых пятен)
+            ctx.fillStyle = 'rgba(100, 100, 100, 0.1)';
+            for (let i = 0; i < 5; i++) {
+                const x = Math.random() * canvas.width;
+                const y = Math.random() * (canvas.height / 2);
+                const size = 50 + Math.random() * 100;
+                
+                ctx.beginPath();
+                ctx.arc(x, y, size, 0, Math.PI * 2);
+                ctx.fill();
+            }
+        }
+        
+        // Генерация всех ассетов при загрузке страницы
+        window.onload = function() {
+            generateConveyor();
+            generateCrossroad();
+            generateOrangeMandarin();
+            generateGreenMandarin();
+            generateDevil();
+            generateToilet();
+            generateBubble();
+            generateSplash();
+            generatePoop();
+            generateBackground();
+        };
     </script>
 </body>
 </html>
