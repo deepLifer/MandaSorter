@@ -106,6 +106,37 @@ class Game {
         // Массив для объектов мемкоинов
         this.memecoins = [];
         
+        // Добавляем массив с репликами надзирателя
+        this.supervisorQuotes = [
+            "Работай быстрее, время - мемкоины!",
+            "Мы теряем деньги, пока ты ленишься!",
+            "Каждая секунда простоя - это упущенная прибыль!",
+            "Черти не должны ждать, они должны есть!",
+            "Быстрее сортируй мандаринки, или я найду того, кто справится лучше!",
+            "Ты что, заснул? Шевелись!",
+            "Мемкоины сами себя не заработают!",
+            "Если черти ждут - ты плохо работаешь!",
+            "Каждая правильная мандаринка - это прибыль для нашей компании!",
+            "Ты слишком медленный для ада!",
+            "В аду нет перерывов, только работа!",
+            "Сатана следит за твоей производительностью!",
+            "Твоя эффективность ниже плановой!",
+            "Ускорься, или я отправлю тебя в котел с кипящей смолой!",
+            "Черти голодные, а ты копаешься!",
+            "Каждая ошибка - это минус к твоей премии!",
+            "Ты работаешь медленнее, чем улитка в патоке!",
+            "Если бы лень была талантом, ты был бы гением!",
+            "Шевели пальцами быстрее, чем языком!",
+            "В следующий раз я найму обезьяну - она будет работать быстрее!"
+        ];
+        
+        // Текущая реплика надзирателя
+        this.currentQuote = "";
+        // Таймер для смены реплик
+        this.quoteTimer = 0;
+        // Интервал смены реплик (в миллисекундах)
+        this.quoteInterval = 5000;
+        
         // Инициализация игры
         this.init();
     }
@@ -137,7 +168,8 @@ class Game {
             { name: 'splash', src: 'assets/images/splash.png' },
             { name: 'poop', src: 'assets/images/poop.png' },
             { name: 'pumpfun', src: 'assets/images/pumpfun.png' },
-            { name: 'logo', src: 'assets/images/logo.png' }
+            { name: 'logo', src: 'assets/images/logo.png' },
+            { name: 'satan', src: 'assets/images/satan.png' } // Добавляем изображение надзирателя
         ];
         
         this.resources.toLoad = imagesToLoad.length;
@@ -236,34 +268,29 @@ class Game {
     
     startGame() {
         // Сброс состояния игры
-        this.state.currentScreen = 'game';
         this.state.mandarinsLeft = this.settings.totalMandarins;
         this.state.score = 0;
         this.state.correctMandarins = 0;
         this.state.wrongMandarins = 0;
         this.state.totalWaitTime = 0;
         this.state.isRunning = true;
-        this.state.gameTime = 0; // Сбрасываем время игры
+        this.state.gameTime = 0;
         
-        // Сброс текущего токена и анимации
-        this.currentTokenName = null;
-        this.tokenShaking = false;
-        this.lastTimestamp = null; // Сброс временной метки для deltaTime
+        // Скрываем старый блок статистики
+        const gameStats = document.getElementById('game-stats');
+        if (gameStats) {
+            gameStats.style.display = 'none';
+        }
         
-        // Обновление отображения статистики
-        this.updateStatsDisplay();
-        
-        // Очистка массивов объектов
-        this.mandarins = [];
+        // Сброс игровых объектов
+        this.conveyor = new Conveyor(this);
         this.devils = [];
+        this.mandarins = [];
         this.effects = [];
         this.memecoins = [];
         
-        // Создание конвейера
-        this.conveyor = new Conveyor(this);
-        
-        // Создание чертей - уменьшаем до 2
-        const devilCount = 2; // Количество чертей
+        // Создаем чертей
+        const devilCount = 2; // Исправляем на 2 черта вместо 3
         const canvasWidth = this.dom.canvas.width;
         
         // Очищаем существующие перекрестки
@@ -293,43 +320,19 @@ class Game {
             this.conveyor.updateBranches();
         }
         
-        // Проверка соответствия перекрестков и чертей
-        console.log("Проверка соответствия перекрестков и чертей:");
-        for (let i = 0; i < this.devils.length; i++) {
-            const devil = this.devils[i];
-            const crossroad = this.conveyor.crossroads[i];
-            
-            if (crossroad) {
-                console.log(`Черт ${i}: (${Math.round(devil.x)}, ${Math.round(devil.y)}), Перекресток ${i}: (${Math.round(crossroad.x)}, ${Math.round(crossroad.y)})`);
-                console.log(`Разница по X: ${Math.abs(devil.x - crossroad.x)}`);
-            } else {
-                console.error(`Для черта ${i} нет соответствующего перекрестка!`);
-            }
-        }
+        // Сброс таймера для спавна мандаринок
+        this.spawnTimer = 0;
         
-        console.log('Черти созданы:', this.devils);
-        console.log('Перекрестки созданы:', this.conveyor.crossroads);
+        // Сброс таймера для смены реплик надзирателя
+        this.quoteTimer = 0;
+        this.currentQuote = "";
         
-        // Сброс списка использованных названий мемкоинов
-        this.usedMemecoinNames = [];
-        
-        // Запуск игрового цикла
-        requestAnimationFrame(this.update);
-        
-        // Запуск спавна мандаринок с проверкой окончания игры
-        this.spawnInterval = setInterval(() => {
-            if (this.state.mandarinsLeft > 0) {
-                this.spawnMandarin();
-            } else if (this.mandarins.length === 0) {
-                // Если мандаринки закончились и на конвейере их нет
-                this.endGame();
-            }
-        }, this.settings.spawnInterval);
-        
-        // Показ игрового экрана
+        // Показываем игровой экран
         this.showScreen('game');
         
-        console.log("Игра запущена!");
+        // Запускаем игровой цикл
+        this.lastTimestamp = null;
+        requestAnimationFrame(this.update);
     }
     
     spawnMandarin() {
@@ -369,13 +372,13 @@ class Game {
         // Обновляем общее время простоя чертей
         this.updateTotalWaitTime(deltaTime);
         
-        // Обновляем отображение таймера
-        this.updateTimerDisplay();
+        // Обновляем реплику надзирателя
+        this.updateSupervisorQuote(deltaTime);
         
         // Очистка канваса
         this.ctx.clearRect(0, 0, this.dom.canvas.width, this.dom.canvas.height);
         
-        // Отрисовка фона (перемещаем в начало, чтобы он был под всеми элементами)
+        // Отрисовка фона
         this.drawBackground();
         
         // Обновление и отрисовка конвейера
@@ -418,8 +421,24 @@ class Game {
             }
         }
         
+        // Отрисовка верхнего блока с надзирателем, репликами и результатами
+        this.drawTopPanel(this.ctx);
+        
         // Отрисовка логотипа, надписи "King of the Hill" и текущего токена
         this.drawLogo(this.ctx);
+        
+        // Спавн новых мандаринок
+        this.spawnTimer += deltaTime;
+        if (this.spawnTimer >= this.settings.spawnInterval && this.state.mandarinsLeft > 0) {
+            this.spawnMandarin();
+            this.spawnTimer = 0;
+        }
+        
+        // Проверка окончания игры
+        if (this.state.mandarinsLeft <= 0 && this.mandarins.length === 0) {
+            this.endGame();
+            return;
+        }
         
         // Продолжаем игровой цикл
         requestAnimationFrame(this.update);
@@ -558,7 +577,7 @@ class Game {
     
     endGame() {
         this.state.isRunning = false;
-        clearInterval(this.spawnInterval);
+        clearInterval(this.spawnTimer);
         
         // Обновляем отображение результатов
         this.dom.totalMandarinsDisplay.textContent = this.settings.totalMandarins;
@@ -700,14 +719,14 @@ class Game {
         ctx.fillStyle = 'rgba(0, 0, 0, 0.7)'; // Полупрозрачный черный
         ctx.fillRect(0, rectY, this.dom.canvas.width, rectHeight);
         
-        // Отрисовка логотипа, если он загружен
-        if (this.resources.images.logo && this.resources.images.logo.complete) {
+        // Отрисовка логотипа PumpFun, если он загружен
+        if (this.resources.images.pumpfun && this.resources.images.pumpfun.complete) {
             const logoSize = 50;
             const logoX = 20;
             const logoY = rectY + (rectHeight - logoSize) / 2;
             
             ctx.drawImage(
-                this.resources.images.logo,
+                this.resources.images.pumpfun,
                 logoX,
                 logoY,
                 logoSize,
@@ -768,6 +787,114 @@ class Game {
         
         // Обновляем отображение
         this.dom.timerDisplay.textContent = `${totalWaitTimeSeconds}с`;
+    }
+    
+    // Метод для отрисовки верхнего блока с надзирателем, репликами и результатами
+    drawTopPanel(ctx) {
+        // Размеры и позиция верхнего блока
+        const panelHeight = this.dom.canvas.height * 0.25;
+        const panelY = 0;
+        
+        // Фон блока
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.7)'; // Полупрозрачный черный
+        ctx.fillRect(0, panelY, this.dom.canvas.width, panelHeight);
+        
+        // Отрисовка изображения надзирателя
+        if (this.resources.images.satan && this.resources.images.satan.complete) {
+            const imageSize = panelHeight * 0.8;
+            const imageX = 20;
+            const imageY = panelY + (panelHeight - imageSize) / 2;
+            
+            // Рамка вокруг изображения
+            ctx.strokeStyle = '#4B0082'; // Индиго для рамки
+            ctx.lineWidth = 3;
+            ctx.strokeRect(imageX - 5, imageY - 5, imageSize + 10, imageSize + 10);
+            
+            // Изображение
+            ctx.drawImage(
+                this.resources.images.satan,
+                imageX,
+                imageY,
+                imageSize,
+                imageSize
+            );
+        }
+        
+        // Отрисовка блока с результатами (перемещаем перед текстовым блоком)
+        const resultsX = this.dom.canvas.width - 200;
+        const resultsY = panelY + 20;
+        
+        // Добавляем фон для блока результатов, чтобы текст не перекрывался
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.5)'; // Полупрозрачный черный
+        ctx.fillRect(resultsX - 10, resultsY - 10, 190, 95);
+        
+        // Добавляем рамку для блока результатов
+        ctx.strokeStyle = '#4B0082'; // Индиго для рамки
+        ctx.lineWidth = 2;
+        ctx.strokeRect(resultsX - 10, resultsY - 10, 190, 95);
+        
+        ctx.font = '16px Cornerita';
+        ctx.fillStyle = '#FFFFFF';
+        ctx.textAlign = 'left';
+        
+        // Преобразуем миллисекунды в секунды с одним десятичным знаком для отображения
+        const totalWaitTimeSeconds = (this.state.totalWaitTime / 1000).toFixed(1);
+        
+        ctx.fillText(`Осталось: ${this.state.mandarinsLeft}`, resultsX, resultsY);
+        ctx.fillText(`Простой: ${totalWaitTimeSeconds}с`, resultsX, resultsY + 25);
+        ctx.fillText(`Правильно: ${this.state.correctMandarins}`, resultsX, resultsY + 50);
+        ctx.fillText(`Неправильно: ${this.state.wrongMandarins}`, resultsX, resultsY + 75);
+        
+        // Отрисовка текстового блока с репликой
+        const quoteX = 20 + panelHeight * 0.8 + 20; // После изображения + отступ
+        const quoteY = panelY + panelHeight * 0.3;
+        const quoteWidth = this.dom.canvas.width - quoteX - 220; // Уменьшаем ширину, чтобы не перекрывать блок результатов
+        
+        ctx.font = '18px Cornerita';
+        ctx.fillStyle = '#FFFFFF';
+        ctx.textAlign = 'left';
+        ctx.textBaseline = 'middle';
+        
+        // Отрисовка текста реплики с переносом строк
+        this.wrapText(ctx, this.currentQuote, quoteX, quoteY, quoteWidth, 24);
+    }
+    
+    // Метод для переноса текста
+    wrapText(ctx, text, x, y, maxWidth, lineHeight) {
+        const words = text.split(' ');
+        let line = '';
+        let lineCount = 0;
+        
+        for (let n = 0; n < words.length; n++) {
+            const testLine = line + words[n] + ' ';
+            const metrics = ctx.measureText(testLine);
+            const testWidth = metrics.width;
+            
+            if (testWidth > maxWidth && n > 0) {
+                ctx.fillText(line, x, y + lineCount * lineHeight);
+                line = words[n] + ' ';
+                lineCount++;
+            } else {
+                line = testLine;
+            }
+        }
+        
+        ctx.fillText(line, x, y + lineCount * lineHeight);
+    }
+    
+    // Метод для обновления реплики надзирателя
+    updateSupervisorQuote(deltaTime) {
+        this.quoteTimer += deltaTime;
+        
+        // Если прошло достаточно времени или это первая реплика
+        if (this.quoteTimer >= this.quoteInterval || this.currentQuote === "") {
+            // Выбираем случайную реплику
+            const randomIndex = Math.floor(Math.random() * this.supervisorQuotes.length);
+            this.currentQuote = this.supervisorQuotes[randomIndex];
+            
+            // Сбрасываем таймер
+            this.quoteTimer = 0;
+        }
     }
 }
 
