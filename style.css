@@ -133,4 +133,75 @@ canvas {
     width: 0%;
     background: linear-gradient(to right, #ff00ff, #00ffff);
     transition: width 0.3s ease;
+}
+
+/* Стили для кнопки доната в Telegram */
+.telegram-donate-button {
+    position: fixed;
+    bottom: 80px;
+    right: 20px;
+    background-color: #0088cc;
+    color: white;
+    border-radius: 20px;
+    padding: 10px 15px;
+    display: flex;
+    align-items: center;
+    cursor: pointer;
+    z-index: 100;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+    transition: all 0.3s ease;
+}
+
+.telegram-donate-button:hover {
+    background-color: #0099dd;
+    transform: scale(1.05);
+}
+
+.telegram-donate-button img {
+    width: 24px;
+    height: 24px;
+    margin-right: 8px;
+}
+
+.telegram-donate-button span {
+    font-family: 'Cornerita', sans-serif;
+    font-size: 14px;
+}
+
+/* Класс для скрытия кнопки */
+.hidden-button {
+    display: none !important;
+}
+
+/* Стили для сообщения благодарности */
+.thank-you-message {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background-color: rgba(0, 0, 0, 0.8);
+    color: white;
+    padding: 20px 30px;
+    border-radius: 10px;
+    font-family: 'Cornerita', sans-serif;
+    font-size: 24px;
+    z-index: 1000;
+    animation: fadeIn 0.5s ease;
+    text-align: center;
+    box-shadow: 0 0 20px rgba(255, 204, 0, 0.5);
+    border: 2px solid #FFCC00;
+}
+
+.thank-you-message.fade-out {
+    animation: fadeOut 1s ease;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+@keyframes fadeOut {
+    from { opacity: 1; }
+    to { opacity: 0; }
 } 

@@ -153,6 +153,9 @@ class Game {
         this.dom.playAgainButton.addEventListener('click', () => this.startGame());
         this.dom.menuButton.addEventListener('click', () => this.showScreen('start'));
         this.dom.canvas.addEventListener('click', this.handleClick);
+        
+        // Инициализация кнопки доната
+        this.initDonateButton();
     }
     
     loadResources() {
@@ -895,6 +898,54 @@ class Game {
             // Сбрасываем таймер
             this.quoteTimer = 0;
         }
+    }
+    
+    // Метод для инициализации кнопки доната
+    initDonateButton() {
+        const donateButton = document.getElementById('donate-button');
+        
+        // Проверяем, запущено ли приложение в Telegram и доступна ли оплата звездами
+        if (window.telegramPayment && window.telegramPayment.canPayWithStars()) {
+            // Показываем кнопку
+            donateButton.classList.remove('hidden-button');
+            
+            // Добавляем обработчик клика
+            donateButton.addEventListener('click', () => {
+                // Запускаем оплату звездами
+                window.telegramPayment.payWithStars(
+                    5, // Количество звезд (можно настроить)
+                    "Поддержка игры Мандариновый Конвейер",
+                    "Ваша поддержка помогает нам создавать новые игры!",
+                    (success, error) => {
+                        if (success) {
+                            // Показываем благодарность за поддержку
+                            this.showThankYouMessage();
+                        } else {
+                            console.error("Ошибка при оплате:", error);
+                        }
+                    }
+                );
+            });
+        }
+    }
+    
+    // Метод для отображения благодарности за поддержку
+    showThankYouMessage() {
+        // Создаем элемент с сообщением
+        const messageElement = document.createElement('div');
+        messageElement.className = 'thank-you-message';
+        messageElement.textContent = 'Спасибо за вашу поддержку!';
+        
+        // Добавляем элемент на страницу
+        document.body.appendChild(messageElement);
+        
+        // Удаляем элемент через 3 секунды
+        setTimeout(() => {
+            messageElement.classList.add('fade-out');
+            setTimeout(() => {
+                document.body.removeChild(messageElement);
+            }, 1000);
+        }, 3000);
     }
 }
 
