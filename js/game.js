@@ -59,6 +59,17 @@ class Game {
             loaded: 0
         };
         
+        // Добавляем массив для эффектов
+        this.effects = [];
+        
+        // Добавляем объект для звуков
+        this.sounds = {
+            loaded: false,
+            toLoad: 0,
+            loaded: 0,
+            audio: {}
+        };
+        
         // Привязка методов
         this.update = this.update.bind(this);
         this.handleClick = this.handleClick.bind(this);
@@ -90,7 +101,8 @@ class Game {
             { name: 'devil', src: 'assets/images/devil.png' },
             { name: 'toilet', src: 'assets/images/toilet.png' },
             { name: 'crossroad', src: 'assets/images/crossroad.png' },
-            { name: 'bubble', src: 'assets/images/bubble.png' }
+            { name: 'bubble', src: 'assets/images/bubble.png' },
+            { name: 'splash', src: 'assets/images/splash.png' }
         ];
         
         this.resources.toLoad = imagesToLoad.length;
@@ -105,6 +117,31 @@ class Game {
                 if (this.resources.loaded === this.resources.toLoad) {
                     this.resources.loaded = true;
                     this.showScreen('start');
+                }
+            };
+        });
+    }
+    
+    loadSounds() {
+        const soundsToLoad = [
+            { name: 'correct', src: 'assets/sounds/correct.mp3' },
+            { name: 'wrong', src: 'assets/sounds/wrong.mp3' },
+            { name: 'eat', src: 'assets/sounds/eat.mp3' },
+            { name: 'reject', src: 'assets/sounds/reject.mp3' },
+            { name: 'click', src: 'assets/sounds/click.mp3' }
+        ];
+        
+        this.sounds.toLoad = soundsToLoad.length;
+        
+        soundsToLoad.forEach(sound => {
+            const audio = new Audio();
+            audio.src = sound.src;
+            audio.oncanplaythrough = () => {
+                this.sounds.audio[sound.name] = audio;
+                this.sounds.loaded++;
+                
+                if (this.sounds.loaded === this.sounds.toLoad) {
+                    this.sounds.loaded = true;
                 }
             };
         });
@@ -227,6 +264,14 @@ class Game {
             }
         }
         
+        // Обновление эффектов
+        for (let i = this.effects.length - 1; i >= 0; i--) {
+            const effect = this.effects[i];
+            if (!effect.update(deltaTime)) {
+                this.effects.splice(i, 1);
+            }
+        }
+        
         // Отрисовка
         this.draw();
         
@@ -253,6 +298,9 @@ class Game {
         
         // Отрисовка мандаринок
         this.mandarins.forEach(mandarin => mandarin.draw(this.ctx));
+        
+        // Отрисовка эффектов
+        this.effects.forEach(effect => effect.draw(this.ctx));
     }
     
     handleClick(event) {
@@ -290,6 +338,10 @@ class Game {
         this.dom.mandarinsLeftDisplay.textContent = `Осталось: ${this.state.mandarinsLeft}`;
         this.dom.scoreDisplay.textContent = `Счёт: ${this.state.score}`;
         this.dom.timerDisplay.textContent = `Время ожидания: ${Math.floor(this.state.totalWaitTime / 1000)}с`;
+        
+        // Обновляем индикатор прогресса
+        const progress = (this.settings.totalMandarins - this.state.mandarinsLeft) / this.settings.totalMandarins * 100;
+        document.getElementById('progress-bar').style.width = `${progress}%`;
     }
     
     updateResultsScreen() {
@@ -303,6 +355,14 @@ class Game {
         this.state.isRunning = false;
         clearInterval(this.spawnInterval);
         this.showScreen('results');
+    }
+    
+    playSound(name) {
+        if (this.sounds.audio[name]) {
+            const sound = this.sounds.audio[name];
+            sound.currentTime = 0;
+            sound.play();
+        }
     }
 }
 

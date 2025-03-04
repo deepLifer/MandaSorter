@@ -51,22 +51,52 @@ class Mandarin {
         }
     }
     
+    createEffect(type) {
+        // Создаем эффект в зависимости от типа (correct/wrong)
+        const effect = {
+            x: this.x,
+            y: this.y,
+            size: this.width * 2,
+            alpha: 1,
+            color: type === 'correct' ? '#00ff00' : '#ff0000',
+            update: function(deltaTime) {
+                this.size += deltaTime * 0.1;
+                this.alpha -= deltaTime * 0.002;
+                return this.alpha > 0;
+            },
+            draw: function(ctx) {
+                ctx.globalAlpha = this.alpha;
+                ctx.fillStyle = this.color;
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.size / 2, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.globalAlpha = 1;
+            }
+        };
+        
+        // Добавляем эффект в массив эффектов в игре
+        this.game.effects.push(effect);
+    }
+    
     reachDevil() {
         // Проверка, может ли черт принять мандаринку
         if (this.game.devil.canEat) {
             // Проверка, правильная ли мандаринка
             if (this.type === this.game.devil.desiredType) {
                 // Правильная мандаринка
+                this.createEffect('correct');
                 this.game.devil.eat(this);
                 this.game.state.correctMandarins++;
                 this.game.state.score += 10;
             } else {
                 // Неправильная мандаринка
+                this.createEffect('wrong');
                 this.game.devil.reject(this);
                 this.game.state.wrongMandarins++;
             }
         } else {
             // Черт занят, отбрасывает мандаринку
+            this.createEffect('wrong');
             this.game.devil.reject(this);
             this.game.state.wrongMandarins++;
         }

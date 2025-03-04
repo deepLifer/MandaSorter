@@ -56,14 +56,41 @@ class Devil {
             80
         );
         
-        // Отрисовка черта
-        ctx.drawImage(
-            this.devilImage,
-            this.x - this.width / 2,
-            this.y - this.height / 2,
-            this.width,
-            this.height
-        );
+        // Отрисовка черта с анимацией
+        if (this.isEating) {
+            // Анимация поедания: увеличиваем размер и слегка меняем позицию
+            const scale = 1 + 0.1 * Math.sin(this.eatingTimer / 200);
+            ctx.drawImage(
+                this.devilImage,
+                this.x - this.width / 2 * scale,
+                this.y - this.height / 2 * scale,
+                this.width * scale,
+                this.height * scale
+            );
+        } else if (this.isRejecting) {
+            // Анимация отбрасывания: поворачиваем черта
+            const angle = 0.1 * Math.sin(this.rejectingTimer / 50);
+            ctx.save();
+            ctx.translate(this.x, this.y);
+            ctx.rotate(angle);
+            ctx.drawImage(
+                this.devilImage,
+                -this.width / 2,
+                -this.height / 2,
+                this.width,
+                this.height
+            );
+            ctx.restore();
+        } else {
+            // Обычная отрисовка
+            ctx.drawImage(
+                this.devilImage,
+                this.x - this.width / 2,
+                this.y - this.height / 2,
+                this.width,
+                this.height
+            );
+        }
         
         // Отрисовка пузыря желания, если черт не ест и не отбрасывает
         if (!this.isEating && !this.isRejecting) {
