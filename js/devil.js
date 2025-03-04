@@ -61,41 +61,8 @@ class Devil {
     }
     
     draw(ctx) {
-        // Отрисовка унитаза (смещаем на 50% вниз)
-        ctx.drawImage(
-            this.toiletImage,
-            this.x - 60,
-            this.y, // Было this.y - 40, смещаем на 50% вниз
-            120,
-            80
-        );
-        
-        // Отрисовка черта с анимацией
-        if (this.isEating) {
-            // Анимация поедания: увеличиваем размер и слегка меняем позицию
-            const scale = 1 + 0.1 * Math.sin(this.eatingTimer / 200);
-            ctx.drawImage(
-                this.devilImage,
-                this.x - this.width / 2 * scale,
-                this.y - this.height / 2 * scale,
-                this.width * scale,
-                this.height * scale
-            );
-        } else if (this.isRejecting) {
-            // Анимация отбрасывания: поворачиваем голову
-            ctx.save();
-            ctx.translate(this.x, this.y);
-            ctx.rotate(Math.sin(this.rejectingTimer / 100) * 0.2);
-            ctx.drawImage(
-                this.devilImage,
-                -this.width / 2,
-                -this.height / 2,
-                this.width,
-                this.height
-            );
-            ctx.restore();
-        } else {
-            // Обычная отрисовка
+        // Отрисовка черта
+        if (this.devilImage && this.devilImage.complete) {
             ctx.drawImage(
                 this.devilImage,
                 this.x - this.width / 2,
@@ -103,39 +70,25 @@ class Devil {
                 this.width,
                 this.height
             );
-        }
-        
-        // Отрисовка пузыря с желаемой мандаринкой
-        if (!this.isEating && !this.isRejecting) {
-            // Пузырь
-            ctx.drawImage(
-                this.bubbleImage,
-                this.x + 50, // Возвращаем исходную позицию справа от черта
-                this.y - 80,
-                60,
-                60
-            );
-            
-            // Желаемая мандаринка
-            ctx.drawImage(
-                this.desiredMandarinImage,
-                this.x + 50,
-                this.y - 80,
-                40,
-                40
+        } else {
+            // Запасной вариант - рисуем черный прямоугольник
+            ctx.fillStyle = '#000000';
+            ctx.fillRect(
+                this.x - this.width / 2,
+                this.y - this.height / 2,
+                this.width,
+                this.height
             );
         }
         
-        // Добавляем отрисовку таймера под чертом с увеличенным размером
+        // Отрисовка пузыря с желаемым типом мандаринки
+        if (this.desiredType) {
+            this.drawBubble(ctx);
+        }
+        
+        // Отрисовка индикатора ожидания
         if (this.isWaiting) {
-            const waitTimeSeconds = (this.waitTimer / 1000).toFixed(1);
-            ctx.font = '32px Cornerita'; // Увеличиваем размер шрифта в 2 раза
-            ctx.fillStyle = waitTimeSeconds > 5 ? '#ff0000' : '#ffffff';
-            ctx.textAlign = 'center';
-            ctx.textBaseline = 'middle';
-            
-            // Рисуем таймер под чертом, смещаем ещё ниже
-            ctx.fillText(`${waitTimeSeconds}с`, this.x, this.y + this.height / 2 + 50); // Увеличиваем смещение с 20 до 50
+            this.drawWaitingIndicator(ctx);
         }
     }
     
@@ -179,5 +132,36 @@ class Devil {
         return this.game.settings.mandarinTypes[
             Math.floor(Math.random() * this.game.settings.mandarinTypes.length)
         ];
+    }
+    
+    drawBubble(ctx) {
+        // Пузырь
+        ctx.drawImage(
+            this.bubbleImage,
+            this.x + 50, // Возвращаем исходную позицию справа от черта
+            this.y - 80,
+            60,
+            60
+        );
+        
+        // Желаемая мандаринка
+        ctx.drawImage(
+            this.desiredMandarinImage,
+            this.x + 50,
+            this.y - 80,
+            40,
+            40
+        );
+    }
+    
+    drawWaitingIndicator(ctx) {
+        const waitTimeSeconds = (this.waitTimer / 1000).toFixed(1);
+        ctx.font = '32px Cornerita'; // Увеличиваем размер шрифта в 2 раза
+        ctx.fillStyle = waitTimeSeconds > 5 ? '#ff0000' : '#ffffff';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        
+        // Рисуем таймер под чертом, смещаем ещё ниже
+        ctx.fillText(`${waitTimeSeconds}с`, this.x, this.y + this.height / 2 + 50); // Увеличиваем смещение с 20 до 50
     }
 } 

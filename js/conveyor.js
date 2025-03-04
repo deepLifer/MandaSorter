@@ -105,131 +105,29 @@ class Conveyor {
     draw(ctx) {
         // Отрисовка конвейера
         if (this.conveyorImage && this.conveyorImage.complete) {
-            try {
-                // Используем метод с повторяющимися изображениями
-                const imgWidth = this.conveyorImage.width;
-                
-                // Вычисляем начальную позицию с учетом смещения
-                // Добавляем дополнительный сегмент слева для предотвращения появления черного прямоугольника
-                const startX = (this.offset % imgWidth) - imgWidth;
-                
-                // Рисуем сегменты конвейера, начиная с дополнительного сегмента слева
-                for (let x = startX; x < this.game.dom.canvas.width; x += imgWidth) {
-                    ctx.drawImage(
-                        this.conveyorImage,
-                        x,
-                        this.y - this.height / 2,
-                        imgWidth,
-                        this.height
-                    );
-                }
-                
-                // Добавляем обводку для лучшей видимости
-                ctx.strokeStyle = '#333';
-                ctx.lineWidth = 2;
-                ctx.strokeRect(0, this.y - this.height / 2, this.game.dom.canvas.width, this.height);
-            } catch (e) {
-                console.error('Ошибка при отрисовке конвейера:', e);
-                
-                // Запасной вариант - просто рисуем прямоугольник
-                ctx.fillStyle = '#555';
-                ctx.fillRect(0, this.y - this.height / 2, this.game.dom.canvas.width, this.height);
+            // Отрисовка повторяющегося изображения конвейера
+            const patternWidth = this.conveyorImage.width;
+            
+            // Вычисляем количество повторений изображения
+            const repeats = Math.ceil(this.game.dom.canvas.width / patternWidth) + 1;
+            
+            // Отрисовка с учетом смещения для анимации
+            for (let i = 0; i < repeats; i++) {
+                const x = i * patternWidth - this.offset;
+                ctx.drawImage(this.conveyorImage, x, this.y - this.height / 2, patternWidth, this.height);
             }
         } else {
-            // Если изображение не загружено, рисуем простой прямоугольник
-            ctx.fillStyle = '#555';
+            // Запасной вариант - рисуем серую линию
+            ctx.fillStyle = '#888888';
             ctx.fillRect(0, this.y - this.height / 2, this.game.dom.canvas.width, this.height);
-            
-            // Выводим сообщение в консоль
-            console.warn('Изображение конвейера не загружено или не готово к отрисовке');
         }
-        
-        /* Временно убираем отрисовку ответвлений
-        // Отрисовка ответвлений от перекрестков к чертям
-        for (const branch of this.branches) {
-            if (this.conveyorImage && this.conveyorImage.complete) {
-                try {
-                    // Рисуем вертикальное ответвление
-                    const imgWidth = this.conveyorImage.width;
-                    const imgHeight = this.conveyorImage.height || this.height;
-                    
-                    // Вычисляем количество сегментов для заполнения ответвления
-                    const branchLength = branch.endY - branch.startY;
-                    const segmentsCount = Math.ceil(branchLength / imgHeight);
-                    
-                    // Рисуем сегменты ответвления с анимацией
-                    // Используем то же смещение, что и для основного конвейера, но в вертикальном направлении
-                    const startY = branch.startY + (this.offset % imgHeight);
-                    
-                    for (let i = -1; i < segmentsCount; i++) {
-                        const y = startY + i * imgHeight;
-                        if (y < branch.endY && y + imgHeight > branch.startY) {
-                            ctx.drawImage(
-                                this.conveyorImage,
-                                branch.startX - branch.width / 2,
-                                y,
-                                branch.width,
-                                imgHeight
-                            );
-                        }
-                    }
-                    
-                    // Добавляем обводку для лучшей видимости
-                    ctx.strokeStyle = '#333';
-                    ctx.lineWidth = 2;
-                    ctx.beginPath();
-                    ctx.moveTo(branch.startX - branch.width / 2, branch.startY);
-                    ctx.lineTo(branch.startX - branch.width / 2, branch.endY);
-                    ctx.lineTo(branch.startX + branch.width / 2, branch.endY);
-                    ctx.lineTo(branch.startX + branch.width / 2, branch.startY);
-                    ctx.stroke();
-                } catch (e) {
-                    console.error('Ошибка при отрисовке ответвления:', e);
-                    
-                    // Запасной вариант - просто рисуем прямоугольник
-                    ctx.fillStyle = '#555';
-                    ctx.fillRect(
-                        branch.startX - branch.width / 2,
-                        branch.startY,
-                        branch.width,
-                        branch.endY - branch.startY
-                    );
-                }
-            } else {
-                // Если изображение не загружено, рисуем простой прямоугольник
-                ctx.fillStyle = '#555';
-                ctx.fillRect(
-                    branch.startX - branch.width / 2,
-                    branch.startY,
-                    branch.width,
-                    branch.endY - branch.startY
-                );
-            }
-        }
-        */
         
         // Отрисовка перекрестков
         for (let i = 0; i < this.crossroads.length; i++) {
             const crossroad = this.crossroads[i];
             
-            // Если перекресток под курсором, рисуем подсветку
-            if (i === this.hoveredCrossroadIndex) {
-                ctx.save();
-                ctx.fillStyle = 'rgba(255, 255, 255, 0.3)';
-                ctx.beginPath();
-                ctx.arc(
-                    crossroad.x,
-                    this.y,
-                    crossroad.width / 2,
-                    0,
-                    Math.PI * 2
-                );
-                ctx.fill();
-                ctx.restore();
-            }
-            
-            // Отрисовка изображения перекрестка
             if (this.crossroadImage && this.crossroadImage.complete) {
+                // Отрисовка изображения перекрестка
                 ctx.drawImage(
                     this.crossroadImage,
                     crossroad.x - crossroad.visualWidth / 2,
@@ -238,8 +136,8 @@ class Conveyor {
                     crossroad.visualHeight
                 );
             } else {
-                // Если изображение не загружено, рисуем простой круг
-                ctx.fillStyle = '#777';
+                // Запасной вариант - рисуем красный круг
+                ctx.fillStyle = '#FF0000';
                 ctx.beginPath();
                 ctx.arc(
                     crossroad.x,
@@ -249,6 +147,18 @@ class Conveyor {
                     Math.PI * 2
                 );
                 ctx.fill();
+            }
+        }
+        
+        // Отрисовка ответвлений от перекрестков к чертям
+        if (this.branches && this.branches.length > 0) {
+            for (const branch of this.branches) {
+                ctx.strokeStyle = '#888888';
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                ctx.moveTo(branch.startX, branch.startY);
+                ctx.lineTo(branch.endX, branch.endY);
+                ctx.stroke();
             }
         }
     }
@@ -283,5 +193,21 @@ class Conveyor {
         }
         
         return closestIndex;
+    }
+    
+    // Метод для добавления перекрестка
+    addCrossroad(x) {
+        const crossroad = {
+            x: x,
+            y: this.y,
+            width: 40,
+            height: 40,
+            visualWidth: 30,
+            visualHeight: 30
+        };
+        
+        this.crossroads.push(crossroad);
+        console.log(`Добавлен перекресток на позиции (${x}, ${this.y})`);
+        return crossroad;
     }
 } 

@@ -36,59 +36,68 @@ class Memecoin {
     }
     
     update(deltaTime) {
-        // Обновление времени жизни
-        this.elapsedTime += deltaTime;
-        if (this.elapsedTime >= this.lifeTime) {
-            this.isFadingOut = true;
+        // Проверка на корректность объекта
+        if (!this || !this.game) {
+            console.error("Некорректный объект мемкоина");
+            return false;
         }
         
-        // Обработка падения и отскоков
-        if (this.isFalling) {
-            this.y += this.fallSpeed;
+        try {
+            // Обновление времени жизни
+            this.elapsedTime += deltaTime;
+            if (this.elapsedTime >= this.lifeTime) {
+                this.isFadingOut = true;
+            }
             
-            // Проверка достижения нижней панели
-            const panelY = this.game.dom.canvas.height - this.game.dom.canvas.height * 0.15;
-            
-            if (this.y >= panelY - this.height / 2 && !this.hitPanel) {
-                // Мемкоин достиг нижней панели
-                this.hitPanel = true;
+            // Обработка падения и отскоков
+            if (this.isFalling) {
+                this.y += this.fallSpeed;
                 
-                // Обновляем текущий токен в игре и запускаем анимацию тряски
-                console.log("Мемкоин достиг панели:", this.name);
-                this.game.setCurrentToken(this.name);
+                // Проверка достижения нижней панели
+                const panelY = this.game.dom.canvas.height - this.game.dom.canvas.height * 0.15;
                 
-                // Продолжаем падение за панель
-                this.fallSpeed = 1; // Замедляем падение за панелью
+                if (this.y >= panelY - this.height / 2 && !this.hitPanel) {
+                    // Мемкоин достиг нижней панели
+                    this.hitPanel = true;
+                    
+                    // Обновляем текущий токен в игре и запускаем анимацию тряски
+                    console.log("Мемкоин достиг панели:", this.name);
+                    this.game.setCurrentToken(this.name);
+                    
+                    // Продолжаем падение за панель
+                    this.fallSpeed = 1; // Замедляем падение за панелью
+                }
+                
+                // Проверка выхода за пределы экрана
+                if (this.y > this.game.dom.canvas.height + this.height) {
+                    console.log("Мемкоин вышел за пределы экрана");
+                    return false; // Удаляем мемкоин
+                }
+            } else if (this.currentBounce <= this.bounceCount) {
+                // Отскок
+                this.y -= this.bounceHeight * (1 - this.currentBounce / this.bounceCount) * 0.1;
+                
+                if (this.y <= this.groundY - this.bounceHeight * (1 - this.currentBounce / this.bounceCount)) {
+                    this.isFalling = true;
+                }
             }
             
-            // Проверка выхода за пределы экрана
-            if (this.y > this.game.dom.canvas.height + this.height) {
-                console.log("Мемкоин вышел за пределы экрана");
-                return false; // Удаляем мемкоин
-            }
-        } else if (this.currentBounce <= this.bounceCount) {
-            // Подъем при отскоке
-            const bounceStrength = this.bounceHeight / (this.currentBounce * 1.5);
-            this.y -= this.fallSpeed * 0.8;
+            // Вращение
+            this.rotation += this.rotationSpeed;
             
-            if (this.y <= this.groundY - bounceStrength) {
-                this.isFalling = true;
+            // Затухание только если мемкоин не достиг панели
+            if (this.isFadingOut && !this.hitPanel) {
+                this.opacity -= this.fadeOutSpeed;
+                if (this.opacity <= 0) {
+                    return false; // Удаляем мемкоин
+                }
             }
+            
+            return true; // Мемкоин остается активным
+        } catch (error) {
+            console.error("Ошибка в update мемкоина:", error);
+            return false; // Удаляем мемкоин при ошибке
         }
-        
-        // Вращение
-        this.rotation += this.rotationSpeed;
-        
-        // Затухание только если мемкоин не достиг панели
-        if (this.isFadingOut && !this.hitPanel) {
-            this.opacity -= this.fadeOutSpeed;
-            if (this.opacity <= 0) {
-                this.opacity = 0;
-                return false; // Объект удаляется
-            }
-        }
-        
-        return true; // Объект остается
     }
     
     draw(ctx) {
