@@ -41,25 +41,20 @@
         
         <!-- Экран результатов -->
         <div id="results-screen" class="screen hidden">
-            <h2>Результаты</h2>
-            <div id="total-mandarins">Всего мандаринок: 50</div>
-            <div id="correct-mandarins">Правильно съедено: 0</div>
-            <div id="wrong-mandarins">Неправильно направлено: 0</div>
-            <div id="total-wait-time">Общее время ожидания: 0</div>
-            <button id="play-again-button">Играть снова</button>
-            <button id="menu-button">Меню</button>
+            <div class="results-container">
+                <div class="supervisor-image-container">
+                    <!-- Изображение надзирателя будет добавлено через JavaScript -->
+                </div>
+                <div class="results-text">
+                    <h2>Итоги работы</h2>
+                    <p id="earned-mnd">Мы заработали <span class="highlight">0 $MND</span> благодаря <span class="highlight">0</span> правильным мандаринкам.</p>
+                    <p id="lost-mnd">Но из-за тебя недополучили <span class="highlight">0 $MND</span> из-за <span class="highlight">0</span> неправильных мандаринок.</p>
+                    <p id="punishment">Ты приговариваешься к <span class="highlight">0</span> криптопалкам!</p>
+                </div>
+                <button id="play-again-button">Заново</button>
+            </div>
         </div>
     </div>
-    
-    <!-- Добавляем в конец body, перед скриптами -->
-    <div id="donate-button" class="telegram-donate-button hidden-button">
-        <img src="assets/images/telegram-star.png" alt="Donate Stars">
-        <span>Поддержать звездами</span>
-    </div>
-    
-    <!-- Добавляем скрипт Telegram WebApp API и наш скрипт telegram.js -->
-    <script src="https://telegram.org/js/telegram-web-app.js"></script>
-    <script src="js/telegram.js"></script>
     
     <!-- Скрипты -->
     <script src="js/conveyor.js"></script>

@@ -3,7 +3,7 @@ class Game {
     constructor() {
         // Настройки игры
         this.settings = {
-            totalMandarins: 100,
+            totalMandarins: 20,
             mandarinTypes: ['orange', 'green'],
             mandarinSpeed: 2.8,
             spawnInterval: 2000, // в миллисекундах
@@ -153,9 +153,6 @@ class Game {
         this.dom.playAgainButton.addEventListener('click', () => this.startGame());
         this.dom.menuButton.addEventListener('click', () => this.showScreen('start'));
         this.dom.canvas.addEventListener('click', this.handleClick);
-        
-        // Инициализация кнопки доната
-        this.initDonateButton();
     }
     
     loadResources() {
@@ -582,15 +579,34 @@ class Game {
         this.state.isRunning = false;
         clearInterval(this.spawnTimer);
         
-        // Обновляем отображение результатов
-        this.dom.totalMandarinsDisplay.textContent = this.settings.totalMandarins;
-        this.dom.correctMandarinsDisplay.textContent = this.state.correctMandarins;
-        this.dom.wrongMandarinsDisplay.textContent = this.state.wrongMandarins;
+        // Расчет результатов
+        const earnedPerMandarin = 5; // $MND за каждую правильную мандаринку
+        const lostPerMandarin = 10; // $MND потеряно за каждую неправильную мандаринку
         
-        // Отображаем общее время простоя в секундах с одним десятичным знаком
-        const totalWaitTimeSeconds = (this.state.totalWaitTime / 1000).toFixed(1);
-        this.dom.totalWaitTimeDisplay.textContent = `${totalWaitTimeSeconds} сек.`;
+        const earnedMND = this.state.correctMandarins * earnedPerMandarin;
+        const lostMND = this.state.wrongMandarins * lostPerMandarin;
         
+        // Обновляем текст на экране результатов
+        const earnedMNDElement = document.getElementById('earned-mnd');
+        const lostMNDElement = document.getElementById('lost-mnd');
+        const punishmentElement = document.getElementById('punishment');
+        
+        earnedMNDElement.innerHTML = `Мы заработали <span class="highlight">${earnedMND} $MND</span> благодаря <span class="highlight">${this.state.correctMandarins}</span> правильным мандаринкам.`;
+        lostMNDElement.innerHTML = `Но из-за тебя недополучили <span class="highlight">${lostMND} $MND</span> из-за <span class="highlight">${this.state.wrongMandarins}</span> неправильных мандаринок.`;
+        punishmentElement.innerHTML = `Ты приговариваешься к <span class="highlight">${this.state.wrongMandarins}</span> криптопалкам!`;
+        
+        // Добавляем изображение надзирателя
+        const supervisorContainer = document.querySelector('.supervisor-image-container');
+        supervisorContainer.innerHTML = ''; // Очищаем контейнер
+        
+        if (this.resources.images.satan && this.resources.images.satan.complete) {
+            const supervisorImage = document.createElement('img');
+            supervisorImage.src = this.resources.images.satan.src;
+            supervisorImage.alt = 'Надзиратель';
+            supervisorContainer.appendChild(supervisorImage);
+        }
+        
+        // Показываем экран результатов
         this.showScreen('results');
     }
     
@@ -898,54 +914,6 @@ class Game {
             // Сбрасываем таймер
             this.quoteTimer = 0;
         }
-    }
-    
-    // Метод для инициализации кнопки доната
-    initDonateButton() {
-        const donateButton = document.getElementById('donate-button');
-        
-        // Проверяем, запущено ли приложение в Telegram и доступна ли оплата звездами
-        if (window.telegramPayment && window.telegramPayment.canPayWithStars()) {
-            // Показываем кнопку
-            donateButton.classList.remove('hidden-button');
-            
-            // Добавляем обработчик клика
-            donateButton.addEventListener('click', () => {
-                // Запускаем оплату звездами
-                window.telegramPayment.payWithStars(
-                    5, // Количество звезд (можно настроить)
-                    "Поддержка игры Мандариновый Конвейер",
-                    "Ваша поддержка помогает нам создавать новые игры!",
-                    (success, error) => {
-                        if (success) {
-                            // Показываем благодарность за поддержку
-                            this.showThankYouMessage();
-                        } else {
-                            console.error("Ошибка при оплате:", error);
-                        }
-                    }
-                );
-            });
-        }
-    }
-    
-    // Метод для отображения благодарности за поддержку
-    showThankYouMessage() {
-        // Создаем элемент с сообщением
-        const messageElement = document.createElement('div');
-        messageElement.className = 'thank-you-message';
-        messageElement.textContent = 'Спасибо за вашу поддержку!';
-        
-        // Добавляем элемент на страницу
-        document.body.appendChild(messageElement);
-        
-        // Удаляем элемент через 3 секунды
-        setTimeout(() => {
-            messageElement.classList.add('fade-out');
-            setTimeout(() => {
-                document.body.removeChild(messageElement);
-            }, 1000);
-        }, 3000);
     }
 }
 
