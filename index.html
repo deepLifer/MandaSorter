@@ -3,20 +3,55 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Моя Telegram Игра</title>
+    <title>Мандариновый Конвейер</title>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
-    <div id="game-container"></div>
+    <div id="game-container">
+        <!-- Стартовый экран -->
+        <div id="start-screen" class="screen">
+            <h1>Мандариновый Конвейер</h1>
+            <button id="start-button">Начать игру</button>
+            <button id="how-to-play-button">Как играть</button>
+        </div>
+        
+        <!-- Экран с правилами -->
+        <div id="how-to-play-screen" class="screen hidden">
+            <h2>Как играть</h2>
+            <p>Нажимайте на перекрёсток, чтобы отправить мандаринку к чёрту.</p>
+            <p>Чёрт показывает в пузыре, какую мандаринку он хочет.</p>
+            <p>Если мандаринка правильная, чёрт её съест.</p>
+            <p>Если неправильная - отбросит!</p>
+            <button id="back-to-menu-button">Назад в меню</button>
+        </div>
+        
+        <!-- Игровой экран -->
+        <div id="game-screen" class="screen hidden">
+            <div id="game-stats">
+                <div id="mandarins-left">Осталось: 100</div>
+                <div id="score">Счёт: 0</div>
+                <div id="timer">Время ожидания: 0</div>
+            </div>
+            <canvas id="game-canvas"></canvas>
+        </div>
+        
+        <!-- Экран результатов -->
+        <div id="results-screen" class="screen hidden">
+            <h2>Результаты</h2>
+            <div id="total-mandarins">Всего мандаринок: 100</div>
+            <div id="correct-mandarins">Правильно съедено: 0</div>
+            <div id="wrong-mandarins">Неправильно направлено: 0</div>
+            <div id="total-wait-time">Общее время ожидания: 0</div>
+            <button id="play-again-button">Играть снова</button>
+            <button id="menu-button">Меню</button>
+        </div>
+    </div>
     
-    <!-- Подключение Telegram Web App API -->
-    <script src="https://telegram.org/js/telegram-web-app.js"></script>
-    
-    <!-- Подключение игрового фреймворка (пример для Phaser) -->
-    <script src="https://cdn.jsdelivr.net/npm/phaser@3.55.2/dist/phaser.min.js"></script>
-    
-    <!-- Ваши скрипты -->
+    <!-- Скрипты -->
+    <script src="js/mandarin.js"></script>
+    <script src="js/devil.js"></script>
+    <script src="js/conveyor.js"></script>
+    <script src="js/ui.js"></script>
     <script src="js/game.js"></script>
-    <script src="js/telegram.js"></script>
 </body>
 </html> 

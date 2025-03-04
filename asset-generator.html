@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Генератор ассетов для игры</title>
+    <style>
+        body { font-family: Arial, sans-serif; background: #222; color: #fff; }
+        .asset { margin: 20px; display: inline-block; text-align: center; }
+        canvas { border: 1px solid #444; background: #000; }
+    </style>
+</head>
+<body>
+    <h1>Генератор ассетов для игры "Мандариновый Конвейер"</h1>
+    <div id="assets-container"></div>
+
+    <script>
+        // Конфигурация ассетов
+        const assets = [
+            { name: 'background', width: 640, height: 960 },
+            { name: 'conveyor', width: 100, height: 30 },
+            { name: 'orange-mandarin', width: 40, height: 40 },
+            { name: 'green-mandarin', width: 40, height: 40 },
+            { name: 'devil', width: 100, height: 120 },
+            { name: 'toilet', width: 120, height: 80 },
+            { name: 'crossroad', width: 50, height: 50 },
+            { name: 'bubble', width: 60, height: 60 }
+        ];
+
+        const container = document.getElementById('assets-container');
+
+        // Создание канвасов для каждого ассета
+        assets.forEach(asset => {
+            const div = document.createElement('div');
+            div.className = 'asset';
+            
+            const canvas = document.createElement('canvas');
+            canvas.width = asset.width;
+            canvas.height = asset.height;
+            canvas.id = asset.name;
+            
+            const ctx = canvas.getContext('2d');
+            
+            // Рисуем заглушку в зависимости от типа ассета
+            drawPlaceholder(ctx, asset);
+            
+            const link = document.createElement('a');
+            link.href = canvas.toDataURL('image/png');
+            link.download = asset.name + '.png';
+            link.textContent = 'Скачать ' + asset.name + '.png';
+            
+            div.appendChild(canvas);
+            div.appendChild(document.createElement('br'));
+            div.appendChild(link);
+            
+            container.appendChild(div);
+        });
+
+        // Функция для рисования заглушек
+        function drawPlaceholder(ctx, asset) {
+            switch(asset.name) {
+                case 'background':
+                    // Темный фон с неоновой сеткой
+                    ctx.fillStyle = '#120024';
+                    ctx.fillRect(0, 0, asset.width, asset.height);
+                    
+                    // Неоновые линии
+                    ctx.strokeStyle = '#ff00ff';
+                    ctx.lineWidth = 2;
+                    for(let i = 0; i < asset.width; i += 40) {
+                        ctx.beginPath();
+                        ctx.moveTo(i, 0);
+                        ctx.lineTo(i, asset.height);
+                        ctx.stroke();
+                    }
+                    
+                    ctx.strokeStyle = '#00ffff';
+                    for(let i = 0; i < asset.height; i += 40) {
+                        ctx.beginPath();
+                        ctx.moveTo(0, i);
+                        ctx.lineTo(asset.width, i);
+                        ctx.stroke();
+                    }
+                    break;
+                    
+                case 'conveyor':
+                    // Серая лента с темными линиями
+                    ctx.fillStyle = '#555';
+                    ctx.fillRect(0, 0, asset.width, asset.height);
+                    
+                    ctx.fillStyle = '#333';
+                    for(let i = 0; i < asset.width; i += 10) {
+                        ctx.fillRect(i, 0, 5, asset.height);
+                    }
+                    break;
+                    
+                case 'orange-mandarin':
+                    // Оранжевый круг с текстурой
+                    ctx.fillStyle = '#ff8800';
+                    ctx.beginPath();
+                    ctx.arc(asset.width/2, asset.height/2, asset.width/2 - 2, 0, Math.PI*2);
+                    ctx.fill();
+                    
+                    // Текстура
+                    ctx.fillStyle = '#ee7700';
+                    ctx.beginPath();
+                    ctx.arc(asset.width/2 - 5, asset.height/2 - 5, asset.width/4, 0, Math.PI*2);
+                    ctx.fill();
+                    
+                    // Листик
+                    ctx.fillStyle = '#00aa00';
+                    ctx.fillRect(asset.width/2 - 2, 2, 4, 6);
+                    break;
+                    
+                case 'green-mandarin':
+                    // Зеленый круг с текстурой
+                    ctx.fillStyle = '#00cc00';
+                    ctx.beginPath();
+                    ctx.arc(asset.width/2, asset.height/2, asset.width/2 - 2, 0, Math.PI*2);
+                    ctx.fill();
+                    
+                    // Текстура
+                    ctx.fillStyle = '#00aa00';
+                    ctx.beginPath();
+                    ctx.arc(asset.width/2 - 5, asset.height/2 - 5, asset.width/4, 0, Math.PI*2);
+                    ctx.fill();
+                    
+                    // Листик
+                    ctx.fillStyle = '#008800';
+                    ctx.fillRect(asset.width/2 - 2, 2, 4, 6);
+                    break;
+                    
+                case 'devil':
+                    // Красное тело
+                    ctx.fillStyle = '#cc0000';
+                    ctx.fillRect(20, 30, 60, 70);
+                    
+                    // Голова
+                    ctx.fillStyle = '#cc0000';
+                    ctx.beginPath();
+                    ctx.arc(asset.width/2, 30, 20, 0, Math.PI*2);
+                    ctx.fill();
+                    
+                    // Рога
+                    ctx.fillStyle = '#880000';
+                    ctx.beginPath();
+                    ctx.moveTo(30, 20);
+                    ctx.lineTo(40, 5);
+                    ctx.lineTo(50, 20);
+                    ctx.fill();
+                    
+                    ctx.beginPath();
+                    ctx.moveTo(50, 20);
+                    ctx.lineTo(60, 5);
+                    ctx.lineTo(70, 20);
+                    ctx.fill();
+                    
+                    // Глаза
+                    ctx.fillStyle = '#ffffff';
+                    ctx.fillRect(35, 25, 10, 10);
+                    ctx.fillRect(55, 25, 10, 10);
+                    
+                    ctx.fillStyle = '#000000';
+                    ctx.fillRect(38, 28, 4, 4);
+                    ctx.fillRect(58, 28, 4, 4);
+                    
+                    // Рот
+                    ctx.fillStyle = '#000000';
+                    ctx.fillRect(40, 45, 20, 5);
+                    break;
+                    
+                case 'toilet':
+                    // Унитаз
+                    ctx.fillStyle = '#ffffff';
+                    ctx.fillRect(20, 20, 80, 60);
+                    
+                    // Бачок
+                    ctx.fillStyle = '#aaddff';
+                    ctx.fillRect(30, 0, 60, 20);
+                    
+                    // Отверстие
+                    ctx.fillStyle = '#000000';
+                    ctx.beginPath();
+                    ctx.ellipse(60, 50, 20, 10, 0, 0, Math.PI*2);
+                    ctx.fill();
+                    break;
+                    
+                case 'crossroad':
+                    // Т-образный перекресток
+                    ctx.fillStyle = '#ffaa00';
+                    ctx.fillRect(0, 15, 50, 20);
+                    ctx.fillRect(15, 35, 20, 15);
+                    
+                    // Стрелка вниз
+                    ctx.fillStyle = '#ffffff';
+                    ctx.beginPath();
+                    ctx.moveTo(25, 35);
+                    ctx.lineTo(35, 35);
+                    ctx.lineTo(30, 45);
+                    ctx.closePath();
+                    ctx.fill();
+                    break;
+                    
+                case 'bubble':
+                    // Пузырь мысли
+                    ctx.fillStyle = '#ffffff';
+                    ctx.beginPath();
+                    ctx.arc(30, 30, 25, 0, Math.PI*2);
+                    ctx.fill();
+                    
+                    // Маленькие кружочки
+                    ctx.beginPath();
+                    ctx.arc(15, 50, 5, 0, Math.PI*2);
+                    ctx.fill();
+                    
+                    ctx.beginPath();
+                    ctx.arc(5, 55, 3, 0, Math.PI*2);
+                    ctx.fill();
+                    break;
+            }
+        }
+    </script>
+</body>
+</html>
